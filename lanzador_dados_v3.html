@@ -548,15 +548,6 @@ function aplicarSync(data) {
   if (fpEl)   fpEl.value   = String(data.FP || 0);
   if (dEl)    dEl.value    = String(data.D || 1);
   if (mEl)    mEl.value    = String(data.modelos || 1);
-  // Stats defensivos de la unidad
-  if (data.R) {
-    const rEl   = document.getElementById('sel-r');
-    const sEl   = document.getElementById('sel-s');
-    const invEl = document.getElementById('sel-inv');
-    if (rEl)   rEl.value   = String(data.R);
-    if (sEl)   sEl.value   = String(data.S || 5);
-    if (invEl) invEl.value = String(data.inv || 0);
-  }
   actualizarResumen();
   // Actualizar banner
   const bar = document.getElementById('sync-bar');
