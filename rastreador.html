@@ -311,7 +311,8 @@ function syncLanzador(unit, grupo) {
       nombre: unit.nombre, perfil: grupo.nombre,
       tipo: grupo.tipo, hab: grupo.hab,
       A: grupo.A, F: grupo.F, FP: grupo.FP, D: grupo.D,
-      modelos: vivos
+      modelos: vivos,
+      R: unit.R || 3, S: unit.S || 5, inv: unit.inv || 0
     }));
   } catch(e) {}
   st.activa = { unitId: unit.id, grupoId: grupo.id };
