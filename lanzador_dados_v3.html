@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lanzador W40k">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a2236">
+<link rel="apple-touch-icon" id="pwa-icon">
+<link rel="manifest" id="pwa-manifest">
+<title>Lanzador v3 — W40k</title>
+<style>
+:root {
+  --bg: #1a2236; --surface: #212d42; --surface2: #212d42;
+  --accent: #2563eb; --accent2: #6baaf5; --gold: #6baaf5;
+  --text: #e8edf5; --muted: #8494ae;
+  --success: #22c47a; --fail: #f56060; --warn: #e8a030;
+  --border: #2d3a52; --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex; flex-direction: column;
+  height: 100vh; height: 100dvh; overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ── HEADER ─────────────────────────────────── */
+.hdr {
+  display: flex; align-items: center; justify-content: center;
+  padding: 7px 14px; border-bottom: 3px solid var(--accent); flex-shrink: 0; background: var(--surface);
+}
+.hdr-title { color: var(--accent2); font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; }
+
+.install-banner { display:none; background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.2); border-radius:6px; padding:7px 12px; margin:5px 10px 0; font-size:0.73rem; color:var(--muted); text-align:center; line-height:1.6; }
+.install-banner.visible { display:block; }
+
+/* ── CONFIG (FIJO ARRIBA) ───────────────────── */
+.cfg { flex-shrink: 0; border-bottom: 2px solid var(--accent); }
+
+.atk-def { display: flex; border-bottom: 1px solid var(--border); }
+.atk-panel { flex: 1; border-right: 1px solid var(--border); padding: 7px 10px; }
+.def-panel { flex: 1; padding: 7px 10px; }
+
+.ptitle { font-size: 0.68rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 5px; font-weight: 500; }
+
+/* Fila perfil */
+.perfil-r { display: flex; gap: 5px; align-items: center; margin-bottom: 5px; }
+.perfil-r select {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 4px 8px;
+  font-size: 0.78rem; -webkit-appearance: none; min-height: 34px;
+}
+.btn-gear {
+  background: none; border: 1px solid var(--accent); border-radius: 5px;
+  color: var(--accent2); width: 34px; height: 34px; font-size: 14px;
+  cursor: pointer; flex-shrink: 0; touch-action: manipulation;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.btn-gear.active { background: rgba(37,99,235,0.15); }
+
+/* Panel ⚙ */
+.gear-panel {
+  display: none; background: rgba(37,99,235,0.07);
+  border: 1px solid rgba(37,99,235,0.2); border-radius: 6px;
+  padding: 7px; margin-bottom: 5px; flex-direction: column; gap: 5px;
+}
+.gear-panel.visible { display: flex; }
+.gear-panel input {
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 5px; padding: 5px 8px;
+  font-size: 0.78rem; min-height: 34px; width: 100%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.gear-btns { display: flex; gap: 5px; }
+.btn-sm {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 5px; padding: 4px 8px; font-size: 0.72rem;
+  cursor: pointer; touch-action: manipulation; min-height: 34px; flex: 1; white-space: nowrap;
+}
+.btn-sm.accent { border-color: var(--accent); color: var(--accent2); }
+.btn-sm.danger { border-color: var(--fail); color: var(--fail); }
+
+/* Stats grid atacante: 6 celdas */
+.stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-bottom: 5px; }
+.def-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.sc { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.sv {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+  width: 100%; min-height: 34px; display: flex; align-items: center;
+  justify-content: center; font-size: 0.8rem; color: var(--text);
+  -webkit-appearance: none; padding: 2px; text-align: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+select.sv { cursor: pointer; }
+.sl { font-size: 0.5rem; color: var(--muted); text-transform: uppercase; text-align: center; width: 100%; overflow: hidden; }
+
+/* Modelos */
+.modelos-r { display: flex; align-items: center; gap: 6px; }
+.modelos-r label { font-size: 0.67rem; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.modelos-r input {
+  width: 56px; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 5px; padding: 3px 6px;
+  font-size: 0.85rem; text-align: center; min-height: 34px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* ── MODIFICADORES (DOS FILAS) ───────────────── */
+.mods-banda {
+  display: flex; flex-direction: column; gap: 0;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.mods-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.mods-row + .mods-row { border-top: 1px solid var(--border); }
+.mods-lbl {
+  font-size: 0.6rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; width: 14px;
+  text-align: center;
+}
+.chips-wrap { display: flex; gap: 4px; }
+.chip {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; font-size: 0.73rem; color: var(--muted);
+  padding: 4px 10px; white-space: nowrap; cursor: pointer;
+  touch-action: manipulation; min-height: 34px;
+  user-select: none; -webkit-user-select: none; transition: all 0.12s;
+}
+.chip .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: none; flex-shrink: 0; }
+.chip input { display: none; }
+.chip.on { border-color: var(--accent); color: var(--accent2); background: rgba(37,99,235,0.15); }
+.chip.on .dot { display: inline-block; }
+.chip.def { border-color: rgba(37,99,235,0.35); color: #6baaf5; }
+.chip.def.on { background: rgba(37,99,235,0.15); }
+.chip.vis { border-color: rgba(34,196,122,0.4); color: var(--success); }
+.chip.vis.on { background: rgba(34,196,122,0.12); }
+.chip.atk { border-color: rgba(245,96,96,0.4); color: #f07070; }
+.chip.atk.on { border-color: rgba(245,96,96,0.7); color: #f07070; background: rgba(245,96,96,0.12); }
+.chip-sel.atk { border-color: rgba(245,96,96,0.4); color: #f07070; }
+.chip-sel.atk.on { border-color: rgba(245,96,96,0.7); color: #f07070; background: rgba(245,96,96,0.12); }
+
+.mods-vsep { width: 1px; background: var(--border); align-self: stretch; margin: 3px 2px; flex-shrink: 0; }
+.me { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.mel { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.mev {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+  width: 42px; min-height: 34px; color: var(--text); font-size: 0.78rem;
+  text-align: center; -webkit-appearance: none; padding: 2px 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+/* Chip con selector invisible encima (Cobertura, No hay dolor) */
+.chip-sel {
+  position: relative; display: flex; align-items: center; gap: 5px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; font-size: 0.73rem; color: var(--muted);
+  padding: 4px 10px; white-space: nowrap; min-height: 34px;
+  transition: all 0.12s; user-select: none; -webkit-user-select: none;
+  overflow: hidden;
+}
+.chip-sel.def { border-color: rgba(37,99,235,0.35); color: #6baaf5; }
+.chip-sel.def.on { border-color: rgba(37,99,235,0.7); color: #6baaf5; background: rgba(37,99,235,0.15); }
+.chip-sel .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: none; flex-shrink: 0; }
+.chip-sel.on .dot { display: inline-block; }
+.chip-sel-val { font-weight: 600; margin-left: 2px; }
+/* select invisible que cubre todo el chip y abre el picker nativo */
+.chip-sel select {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; z-index: 2;
+}
+
+/* ── TIRADAS + BOTÓN LANZAR ─────────────────── */
+.lanzar-banda { display: flex; align-items: stretch; }
+#resumen-tiradas {
+  flex: 1; display: flex; align-items: center; padding: 5px 10px; overflow: hidden;
+}
+#tiradas-row { display: flex; flex: 1; align-items: center; }
+.tirada-bloque { flex: 1; text-align: center; padding: 0 2px; }
+.tirada-bloque-val { font-size: 1.35rem; font-weight: bold; color: var(--accent2); line-height: 1; }
+.tirada-bloque-lbl { font-size: 0.58rem; text-transform: uppercase; color: var(--muted); margin-top: 1px; }
+.tirada-bloque-sub { font-size: 0.58rem; color: var(--muted); }
+.tirada-sep { width: 1px; background: var(--border); align-self: stretch; margin: 3px 0; }
+.tirada-imposible { color: var(--fail) !important; }
+.tirada-inv { color: var(--warn) !important; }
+
+.btn-lanzar {
+  background: var(--accent);
+  color: white; border: none; padding: 0 18px;
+  font-size: 0.82rem; font-weight: bold; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer;
+  border-left: 1px solid rgba(37,99,235,0.35);
+  touch-action: manipulation; white-space: nowrap; min-width: 90px; min-height: 52px;
+}
+.btn-lanzar:active { opacity: 0.85; }
+
+/* ── ÁREA RESULTADO (SCROLL) ────────────────── */
+.res-area {
+  flex: 1; overflow-y: auto; padding: 10px 12px;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Línea resumen rápida */
+.res-linea {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  padding: 6px 10px; background: rgba(37,99,235,0.08);
+  border: 1px solid rgba(37,99,235,0.22); border-radius: 6px;
+  margin-bottom: 10px; font-size: 0.78rem;
+}
+.res-linea .rl-val { color: var(--text); font-weight: 500; }
+.res-linea .rl-arrow { color: var(--border); }
+.res-linea .rl-final { color: var(--accent2); font-size: 1rem; font-weight: bold; margin-left: 2px; }
+
+/* Resultado */
+.paso { margin-bottom: 12px; }
+.paso-titulo { font-size: 0.72rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 6px; }
+.sep { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+.dado-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+.dado { width: 38px; height: 38px; border-radius: 7px; border: 2px solid; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.dado sup { position: absolute; top: 1px; right: 2px; font-size: 0.48rem; background: rgba(0,0,0,0.45); border-radius: 2px; padding: 0 1px; z-index: 1; color: #e8edf5; }
+.dado.ok  { background: rgba(74,222,128,0.12);  border-color: var(--success); color: var(--success); }
+.dado.ko  { background: rgba(248,113,113,0.12); border-color: var(--fail);    color: var(--fail); }
+.dado.esp { background: rgba(251,191,36,0.15);  border-color: var(--warn);    color: var(--warn); }
+.dado.neu { background: rgba(100,100,150,0.15); border-color: var(--border);  color: var(--muted); }
+.dado-pip-grid { position: absolute; inset: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.pip { border-radius: 50%; }
+.pip.on { background: currentColor; }
+
+.resumen-paso { font-size: 0.82rem; color: var(--muted); }
+.resumen-paso strong { color: var(--text); }
+.badge { display: inline-block; background: rgba(251,191,36,0.15); border: 1px solid var(--warn); color: var(--warn); font-size: 0.67rem; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+
+.mod-resumen { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.22); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; }
+.mod-resumen-titulo { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent2); margin-bottom: 6px; }
+.mod-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.mod-chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; border: 1px solid; }
+.mod-chip.c-imp { border-color: #5a9ef0; color: #5a9ef0; background: rgba(90,158,240,0.1); }
+.mod-chip.c-her { border-color: var(--warn); color: var(--warn); background: rgba(251,191,36,0.08); }
+.mod-chip.c-esp { border-color: var(--success); color: var(--success); background: rgba(74,222,128,0.08); }
+.mod-chip.c-def { border-color: var(--muted); color: var(--muted); background: rgba(136,136,170,0.08); }
+
+.config-usada { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; font-size:0.7rem; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:10px; }
+
+.total-box { background: var(--bg); border: 2px solid var(--accent); border-radius: var(--radius); padding: 14px; text-align: center; margin-top: 8px; }
+.total-num { font-size: 2.8rem; font-weight: bold; color: var(--accent2); line-height: 1; }
+.total-lbl { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+.total-sub { color: var(--muted); font-size: 0.7rem; margin-top: 4px; }
+.esperanza-row { display: flex; justify-content: center; gap: 24px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.esp-bloque { text-align: center; }
+.esp-val { font-size: 1.3rem; font-weight: bold; color: var(--muted); }
+.esp-lbl { font-size: 0.63rem; color: var(--muted); text-transform: uppercase; }
+.barra-wrapper { margin-top: 8px; }
+.barra-track { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 3px; }
+.barra-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.barra-fill.verde { background: var(--success); }
+.barra-fill.ambar { background: var(--warn); }
+.barra-fill.rojo  { background: var(--fail); }
+.barra-pct { font-size: 0.7rem; color: var(--muted); }
+
+.btn-repetir { width: 100%; padding: 14px; background: rgba(37,99,235,0.12); border: 1px solid var(--accent); color: var(--accent2); border-radius: var(--radius); font-size: 0.9rem; font-weight: bold; letter-spacing: 2px; cursor: pointer; margin-top: 10px; touch-action: manipulation; }
+
+/* ── HISTORIAL CAJÓN ─────────────────────────── */
+.cajón-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; }
+.cajón-overlay.visible { display: block; }
+.cajón {
+  position: fixed; bottom: 0; left: 0; right: 0; max-height: 65vh;
+  background: var(--surface); border-top: 2px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  overflow-y: auto; transform: translateY(100%);
+  transition: transform 0.28s ease; z-index: 101;
+}
+.cajón.visible { transform: translateY(0); }
+.cajón-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 10px; }
+.cajón-titulo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.cajón-titulo span { font-size: 0.75rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; }
+
+.hist-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; gap: 8px; }
+.hist-info { flex: 1; }
+.hist-nombre { font-size: 0.82rem; color: var(--text); }
+.hist-sub { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+.hist-nums { text-align: right; white-space: nowrap; }
+.hist-daño { font-size: 1.05rem; font-weight: bold; color: var(--accent2); }
+.hist-esp { font-size: 0.68rem; color: var(--muted); }
+.hist-pct { font-size: 0.68rem; }
+.hist-pct.verde { color: var(--success); }
+.hist-pct.ambar { color: var(--warn); }
+.hist-pct.rojo  { color: var(--fail); }
+
+.btn-hist-flotante {
+  position: fixed; bottom: calc(14px + env(safe-area-inset-bottom)); right: 14px;
+  width: 44px; height: 44px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 50%; color: var(--muted); font-size: 16px; cursor: pointer;
+  z-index: 99; display: none; align-items: center; justify-content: center;
+  touch-action: manipulation; box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+.btn-hist-flotante.visible { display: flex; }
+.hist-badge {
+  position: absolute; top: -4px; right: -4px; width: 16px; height: 16px;
+  background: var(--accent); border-radius: 50%; font-size: 0.58rem; color: white;
+  display: flex; align-items: center; justify-content: center;
+}
+</style>
+</head>
+<body>
+
+<div class="hdr"><span class="hdr-title">⚄ Lanzador de Dados — W40k</span></div>
+
+<!-- CONFIG FIJA ARRIBA -->
+<div class="cfg">
+  <div class="atk-def">
+
+    <!-- ATACANTE -->
+    <div class="atk-panel">
+      <div class="ptitle">⚔ Atacante</div>
+      <div class="perfil-r">
+        <select id="sel-perfil-atk" onchange="cargarPerfilAtacante()"><option value="">— Sin perfil —</option></select>
+        <button class="btn-gear" id="gear-btn-atk" onclick="toggleGear('atk')" title="Gestionar perfil">⚙</button>
+      </div>
+      <div class="gear-panel" id="gear-panel-atk">
+        <input type="text" id="inp-nombre-perfil-atk" placeholder="Nombre del perfil…">
+        <div class="gear-btns">
+          <button class="btn-sm accent" id="btn-guardar-perfil-atk" onclick="guardarPerfilAtacante()">💾 Guardar</button>
+          <button class="btn-sm" onclick="editarPerfilAtacante()">✏️ Editar</button>
+          <button class="btn-sm danger" onclick="eliminarPerfilAtacante()">🗑</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="sc">
+          <select id="atk-tipo" class="sv" onchange="actualizarResumen()">
+            <option value="dist">🏹</option>
+            <option value="cc">⚔</option>
+          </select>
+          <span class="sl">Tipo</span>
+        </div>
+        <div class="sc">
+          <select id="atk-hab" class="sv" onchange="actualizarResumen()">
+            <option value="2">2+</option><option value="3" selected>3+</option>
+            <option value="4">4+</option><option value="5">5+</option><option value="6">6+</option>
+          </select>
+          <span class="sl">HP/HA</span>
+        </div>
+        <div class="sc">
+          <input type="text" id="atk-A" class="sv" value="2" placeholder="A" oninput="actualizarResumen()">
+          <span class="sl">Ataques</span>
+        </div>
+        <div class="sc">
+          <input type="number" id="atk-F" class="sv" min="1" max="20" value="4" oninput="actualizarResumen()">
+          <span class="sl">Fuerza</span>
+        </div>
+        <div class="sc">
+          <select id="atk-FP" class="sv" onchange="actualizarResumen()">
+            <option value="0">0</option><option value="-1">-1</option><option value="-2">-2</option>
+            <option value="-3">-3</option><option value="-4">-4</option><option value="-5">-5</option><option value="-6">-6</option>
+          </select>
+          <span class="sl">Pen. A</span>
+        </div>
+        <div class="sc">
+          <input type="text" id="atk-D" class="sv" value="1" placeholder="D" oninput="actualizarResumen()">
+          <span class="sl">Daño</span>
+        </div>
+      </div>
+      <div class="modelos-r">
+        <label for="num-modelos">Modelos</label>
+        <input type="number" id="num-modelos" min="1" max="50" value="1">
+      </div>
+    </div>
+
+    <!-- DEFENSOR -->
+    <div class="def-panel">
+      <div class="ptitle">🛡 Defensor</div>
+      <div class="perfil-r">
+        <select id="sel-perfil-def" onchange="cargarPerfilDefensor()"><option value="">— Sin perfil —</option></select>
+        <button class="btn-gear" id="gear-btn-def" onclick="toggleGear('def')" title="Gestionar perfil">⚙</button>
+      </div>
+      <div class="gear-panel" id="gear-panel-def">
+        <input type="text" id="inp-nombre-perfil-def" placeholder="Nombre del perfil…">
+        <div class="gear-btns">
+          <button class="btn-sm accent" id="btn-guardar-perfil-def" onclick="guardarPerfilDefensor()">💾 Guardar</button>
+          <button class="btn-sm" onclick="editarPerfilDefensor()">✏️ Editar</button>
+          <button class="btn-sm danger" onclick="eliminarPerfilDefensor()">🗑</button>
+        </div>
+      </div>
+      <div class="def-grid">
+        <div class="sc">
+          <select id="sel-r" class="sv" onchange="actualizarResumen()">
+            <option value="2">2</option><option value="3">3</option>
+            <option value="4" selected>4</option><option value="5">5</option>
+            <option value="6">6</option><option value="7">7</option>
+            <option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option>
+            <option value="12">12</option><option value="14">14</option><option value="16">16</option>
+          </select>
+          <span class="sl">R</span>
+        </div>
+        <div class="sc">
+          <select id="sel-s" class="sv" onchange="actualizarResumen()">
+            <option value="2">2+</option><option value="3">3+</option>
+            <option value="4" selected>4+</option><option value="5">5+</option>
+            <option value="6">6+</option><option value="7">—</option>
+          </select>
+          <span class="sl">S</span>
+        </div>
+        <div class="sc">
+          <select id="sel-inv" class="sv" onchange="actualizarResumen()">
+            <option value="0">—</option><option value="3">3+</option>
+            <option value="4">4+</option><option value="5">5+</option><option value="6">6+</option>
+          </select>
+          <span class="sl">Inv</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODIFICADORES BANDA -->
+  <div class="mods-banda">
+    <!-- Fila 1: habilidades -->
+    <div class="mods-row">
+      <div class="chips-wrap">
+        <div class="chip-sel atk" id="chip-rep-imp">
+          <span class="dot"></span>
+          ↺ Repetir impactos<span class="chip-sel-val" id="chip-rep-imp-val"></span>
+          <select id="sel-rep-imp" onchange="syncChipSel('chip-rep-imp','sel-rep-imp');actualizarResumen()">
+            <option value="0">—</option>
+            <option value="r1">Solo 1s</option>
+            <option value="rall">Todos fallos</option>
+          </select>
+        </div>
+        <label class="chip atk" id="tc-rher"><span class="dot"></span><input type="checkbox" id="cb-rher" onchange="syncChip('tc-rher','cb-rher');actualizarResumen()">↺ Relanzar heridas</label>
+        <label class="chip atk" id="tc-let"><span class="dot"></span><input type="checkbox" id="cb-let" onchange="syncChip('tc-let','cb-let')">💀 Golpes letales</label>
+        <label class="chip atk" id="tc-dev"><span class="dot"></span><input type="checkbox" id="cb-dev" onchange="syncChip('tc-dev','cb-dev')">💥 Devastadoras</label>
+        <label class="chip atk" id="tc-sus"><span class="dot"></span><input type="checkbox" id="cb-sus" onchange="syncChip('tc-sus','cb-sus');actualizarResumen()">⚡ Sostenidos</label>
+      </div>
+      <div class="chips-wrap" style="margin-left:auto">
+        <div class="chip-sel def" id="chip-cob">
+          <span class="dot"></span>
+          🌿 Cobertura<span class="chip-sel-val" id="chip-cob-val"></span>
+          <select id="sel-cob" onchange="syncChipSel('chip-cob','sel-cob');actualizarResumen()">
+            <option value="0">—</option>
+            <option value="1">Sí</option>
+          </select>
+        </div>
+        <div class="chip-sel def" id="chip-fnp">
+          <span class="dot"></span>
+          🛡️ No hay dolor<span class="chip-sel-val" id="chip-fnp-val"></span>
+          <select id="sel-fnp" onchange="syncChipSel('chip-fnp','sel-fnp');actualizarResumen()">
+            <option value="0">—</option><option value="4">4+</option>
+            <option value="5">5+</option><option value="6">6+</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- Fila 2: modificadores numéricos + daño esperado -->
+    <div class="mods-row">
+      <div class="me">
+        <span class="mel">Mod. imp.</span>
+        <select id="sel-mod-imp" class="mev" onchange="actualizarResumen()">
+          <option value="2">+2</option><option value="1">+1</option>
+          <option value="0" selected>0</option>
+          <option value="-1">-1</option><option value="-2">-2</option>
+        </select>
+      </div>
+      <div class="me">
+        <span class="mel">Mod. her.</span>
+        <select id="sel-mod-her" class="mev" onchange="actualizarResumen()">
+          <option value="1">+1</option><option value="0" selected>0</option><option value="-1">-1</option>
+        </select>
+      </div>
+      <div class="me">
+        <span class="mel">HM extra</span>
+        <input type="number" id="inp-hm-directas" class="mev" min="0" max="20" value="0">
+      </div>
+      <label class="chip vis on" id="tc-esp"><span class="dot"></span><input type="checkbox" id="cb-esp" checked onchange="syncChip('tc-esp','cb-esp');saveEsperanzaPref();toggleEsperanza()">📊 Daño esp.</label>
+    </div>
+  </div>
+
+  <!-- TIRADAS + LANZAR -->
+  <div class="lanzar-banda">
+    <div id="resumen-tiradas">
+      <div id="tiradas-row"></div>
+    </div>
+    <button class="btn-lanzar" onclick="lanzar()">⚄ Lanzar</button>
+  </div>
+</div>
+
+<!-- RESULTADO (SCROLL) -->
+<div class="res-area">
+  <div id="resultado"></div>
+</div>
+
+<!-- HISTORIAL CAJÓN -->
+<div class="cajón-overlay" id="cajón-overlay" onclick="cerrarHistorial()"></div>
+<div class="cajón" id="cajón-hist">
+  <div class="cajón-handle"></div>
+  <div class="cajón-titulo">
+    <span>📋 Historial</span>
+    <button class="btn-sm danger" style="flex:none;width:auto;padding:4px 10px" onclick="limpiarHistorial()">Limpiar</button>
+  </div>
+  <div id="historial-items"></div>
+</div>
+<button class="btn-hist-flotante" id="btn-hist-flotante" onclick="abrirHistorial()" title="Historial"></button>
+
+<script>
+// ─── LOCALSTORAGE ────────────────────────────────────────────
+const LS_DEFS     = 'w40k_custom_defs';
+const LS_HIST     = 'w40k_roll_history';
+const LS_ATK      = 'w40k_atk_profiles';
+const LS_SHOW_ESP = 'w40k_show_esperanza';
+function loadCustomDefs()   { return JSON.parse(localStorage.getItem(LS_DEFS)  || '[]'); }
+function loadHistory()      { return JSON.parse(localStorage.getItem(LS_HIST)  || '[]'); }
+function loadAtkProfiles()  { return JSON.parse(localStorage.getItem(LS_ATK)   || '[]'); }
+function saveCustomDefs(a)  { localStorage.setItem(LS_DEFS,  JSON.stringify(a)); }
+function saveHistory(a)     { localStorage.setItem(LS_HIST,  JSON.stringify(a)); }
+function saveAtkProfiles(a) { localStorage.setItem(LS_ATK,   JSON.stringify(a)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+let editandoPerfilAtkId = null;
+let editandoPerfilDefId = null;
+
+// ─── INIT ────────────────────────────────────────────────────
+window.onload = () => {
+  refrescarDropdownPerfiles();
+  refrescarDropdownPerfilesAtk();
+  syncChipSel('chip-rep-imp','sel-rep-imp');
+  syncChipSel('chip-cob','sel-cob');
+  syncChipSel('chip-fnp','sel-fnp');
+  actualizarResumen();
+  renderHistorial();
+  const cbEsp = document.getElementById('cb-esp');
+  const showEsp = localStorage.getItem(LS_SHOW_ESP);
+  cbEsp.checked = showEsp === null ? true : showEsp === '1';
+  syncChip('tc-esp', 'cb-esp');
+  inicioPWA();
+};
+
+// ─── PWA ─────────────────────────────────────────────────────
+function inicioPWA() {
+  const c = document.createElement('canvas'); c.width = 180; c.height = 180;
+  const ctx = c.getContext('2d');
+  function rr(x,y,w,h,r){ ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath(); }
+  ctx.fillStyle='#1a2236';ctx.fillRect(0,0,180,180);
+  rr(8,8,164,164,24);ctx.fillStyle='#212d42';ctx.fill();
+  ctx.strokeStyle='#2563eb';ctx.lineWidth=5;ctx.stroke();
+  rr(28,26,124,82,12);ctx.fillStyle='#1a2236';ctx.fill();
+  ctx.strokeStyle='#8494ae';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#8494ae';
+  [[54,57],[90,77],[126,57]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();});
+  ctx.textAlign='center';ctx.font='bold 20px sans-serif';ctx.fillStyle='#8494ae';ctx.fillText('W40K DADOS',90,136);
+  ctx.font='bold 13px sans-serif';ctx.fillStyle='#6baaf5';ctx.fillText('CALCULADORA',90,157);
+  const iconUrl=c.toDataURL('image/png');
+  document.getElementById('pwa-icon').href=iconUrl;
+  const manifest={name:'Lanzador de Dados — W40k',short_name:'Dados W40k',description:'Calculadora de combate para Warhammer 40k',display:'standalone',background_color:'#1a2236',theme_color:'#1a2236',orientation:'portrait-primary',icons:[{src:iconUrl,sizes:'180x180',type:'image/png'}]};
+  try { const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'}); document.getElementById('pwa-manifest').href=URL.createObjectURL(blob); } catch(e){}
+  const enStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if (!enStandalone) {
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    const banner=document.getElementById('install-banner');
+    banner.innerHTML=isIOS?'📲 Para instalar: pulsa <strong style="color:var(--accent2)">Compartir</strong> → <strong style="color:var(--accent2)">"Añadir a pantalla de inicio"</strong>':'📲 Para instalar: pulsa el menú del navegador → <strong style="color:var(--accent2)">"Añadir a pantalla de inicio"</strong>';
+    banner.classList.add('visible');
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+}
+
+// ─── GEAR PANEL ──────────────────────────────────────────────
+function toggleGear(lado) {
+  const panel = document.getElementById(`gear-panel-${lado}`);
+  const btn   = document.getElementById(`gear-btn-${lado}`);
+  const open  = panel.classList.toggle('visible');
+  btn.classList.toggle('active', open);
+}
+
+// ─── ATACANTE ────────────────────────────────────────────────
+function getArmaDirecta() {
+  const Araw = document.getElementById('atk-A').value.trim().toUpperCase();
+  const Draw = document.getElementById('atk-D').value.trim().toUpperCase();
+  return {
+    tipo:   document.getElementById('atk-tipo').value,
+    hab:    parseInt(document.getElementById('atk-hab').value),
+    A:      /^\d+$/.test(Araw) ? parseInt(Araw) : (Araw || 1),
+    F:      parseInt(document.getElementById('atk-F').value) || 4,
+    FP:     parseInt(document.getElementById('atk-FP').value) || 0,
+    D:      /^\d+$/.test(Draw) ? parseInt(Draw) : (Draw || 1),
+    reglas: []
+  };
+}
+
+function syncChip(labelId, cbId) {
+  document.getElementById(labelId).classList.toggle('on', document.getElementById(cbId).checked);
+}
+function syncChipSel(chipId, selId) {
+  const sel = document.getElementById(selId);
+  const active = sel.value !== '0';
+  document.getElementById(chipId).classList.toggle('on', active);
+  const valEl = document.getElementById(chipId + '-val');
+  if (valEl) valEl.textContent = active ? ' ' + sel.options[sel.selectedIndex].text : '';
+}
+
+// ─── TIRADAS NECESARIAS ──────────────────────────────────────
+function actualizarResumen() {
+  const row = document.getElementById('tiradas-row');
+  const a   = getArmaDirecta();
+  const R        = parseInt(document.getElementById('sel-r').value);
+  const salvBase = parseInt(document.getElementById('sel-s').value);
+  const inv      = parseInt(document.getElementById('sel-inv').value) || 0;
+  const modImp   = parseInt(document.getElementById('sel-mod-imp').value) || 0;
+  const modHer   = parseInt(document.getElementById('sel-mod-her').value) || 0;
+  const cobertura = document.getElementById('sel-cob').value === '1';
+
+  const habEf = Math.max(2, Math.min(6, a.hab - modImp));
+  const herObj = objHerida(a.F, R);
+  const herObjEf = Math.max(2, Math.min(7, herObj - modHer));
+  const herLabel = modHer !== 0 ? ` (${modHer>0?'+':''}${modHer})` : '';
+  const salvConPa = salvBase + Math.abs(a.FP);
+  const salvArmor = cobertura ? Math.max(2, salvConPa - 1) : salvConPa;
+  let salvEf, salvClase = '', salvTexto = null;
+  if (inv > 0 && inv < salvArmor) { salvEf = inv; salvClase = 'tirada-inv'; salvTexto = `Inv. ${inv}+`; }
+  else if (salvArmor > 6) { salvEf = null; salvClase = 'tirada-imposible'; salvTexto = 'Imp.'; }
+  else { salvEf = salvArmor; if (cobertura && salvArmor < salvConPa) salvTexto = `${salvArmor}+ (cob.)`; }
+  const salvVal = salvClase === 'tirada-imposible' ? '—' : `${salvEf ?? salvArmor}+`;
+  const modLabel = modImp !== 0 ? ` (${modImp>0?'+':''}${modImp})` : '';
+
+  const fnp = parseInt(document.getElementById('sel-fnp').value) || 0;
+  const fnpBloque = fnp > 0 ? `<div class="tirada-sep"></div><div class="tirada-bloque"><div class="tirada-bloque-val" style="color:var(--warn)">${fnp}+</div><div class="tirada-bloque-lbl">FNP</div></div>` : '';
+
+  row.innerHTML = `
+    <div class="tirada-bloque">
+      <div class="tirada-bloque-val">${habEf}+</div>
+      <div class="tirada-bloque-lbl">Impactar${modLabel}</div>
+    </div>
+    <div class="tirada-sep"></div>
+    <div class="tirada-bloque">
+      <div class="tirada-bloque-val">${herObjEf > 6 ? '—' : herObjEf + '+'}</div>
+      <div class="tirada-bloque-lbl">Herir${herLabel}</div>
+    </div>
+    <div class="tirada-sep"></div>
+    <div class="tirada-bloque">
+      <div class="tirada-bloque-val ${salvClase}">${salvVal}</div>
+      <div class="tirada-bloque-lbl">${salvTexto ?? 'Salvación'}</div>
+    </div>
+    ${fnpBloque}`;
+}
+
+// ─── PIPS ────────────────────────────────────────────────────
+const PIP_PATTERNS = { 1:[4], 2:[2,6], 3:[2,4,6], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+function pipHTML(v) {
+  const p = PIP_PATTERNS[parseInt(v)];
+  if (!p) return v;
+  const cells = Array(9).fill(false);
+  p.forEach(i => cells[i] = true);
+  return `<div class="dado-pip-grid">${cells.map(on => `<span class="pip${on?' on':''}"></span>`).join('')}</div>`;
+}
+
+// ─── DADOS ───────────────────────────────────────────────────
+const d6 = () => Math.floor(Math.random() * 6) + 1;
+const d3 = () => Math.ceil(Math.random() * 3);
+function resolverA(a) {
+  if (typeof a === 'number') return a;
+  if (a === '2D6') return d6()+d6();
+  if (a === '1D6'||a === 'D6') return d6();
+  if (a === '1D3'||a === 'D3') return d3();
+  return parseInt(a) || 1;
+}
+function resolverD(d) {
+  if (typeof d === 'number') return d;
+  if (d === '1D3'||d === 'D3') return d3();
+  if (d === '1D6'||d === 'D6') return d6();
+  return parseInt(d) || 1;
+}
+function eValor(x) {
+  if (typeof x === 'number') return x;
+  if (x === '2D6') return 7; if (['1D6','D6'].includes(x)) return 3.5;
+  if (['1D3','D3'].includes(x)) return 2; return 1;
+}
+function objHerida(F, R) {
+  if (F >= R*2) return 2; if (F > R) return 3;
+  if (F === R) return 4; if (F*2 <= R) return 6; return 5;
+}
+
+// ─── ESPERANZA ───────────────────────────────────────────────
+function calcularEsperado(a, R, salvBase, inv, fnp, nModelos, opts) {
+  const { reroll1, rerollAll, rerollHer, lethal, devast, sustained, modImp, modHer, cobertura, hmDirectas } = opts;
+  const eA = eValor(a.A) * nModelos;
+  const habEf = Math.max(2, Math.min(6, a.hab - modImp));
+  let pH = Math.max(0, (7 - habEf) / 6);
+  let pHef = rerollAll ? pH*(2-pH) : reroll1 ? pH*(7/6) : pH;
+  pHef = Math.min(1, pHef);
+  let eHits = eA * pHef;
+  if (sustained) eHits += eA * (1/6);
+  let eMortals = 0, eHitsForWound = eHits;
+  if (lethal) { const eL = eA*(1/6); eMortals += eL; eHitsForWound = Math.max(0, eHits-eL); }
+  const oH = Math.max(2, Math.min(7, objHerida(a.F,R)-(modHer||0)));
+  const pW = oH > 6 ? 0 : Math.max(0,(7-oH)/6);
+  const pWef = rerollHer ? pW*(2-pW) : pW;
+  const eWounds = eHitsForWound * pWef;
+  if (devast) { const eD = eHitsForWound*(1/6); eMortals += eD; }
+  const eNorm = devast ? Math.max(0, eWounds-eHitsForWound*(1/6)) : eWounds;
+  const salvConPa = salvBase + Math.abs(a.FP);
+  const salvArmor = cobertura ? Math.max(2, salvConPa-1) : salvConPa;
+  let salvEf = (inv>0&&inv<salvArmor) ? inv : (salvArmor>6?7:salvArmor);
+  const pSave = salvEf <= 6 ? Math.min(1,(7-salvEf)/6) : 0;
+  const eUnsaved = eNorm*(1-pSave) + eMortals;
+  const eD = eValor(a.D);
+  let eDmg = eUnsaved * eD;
+  if (fnp > 0) eDmg *= (1-(7-fnp)/6);
+  eDmg += (hmDirectas||0);
+  return Math.max(0, Math.round(eDmg*10)/10);
+}
+
+// ─── LANZAR ──────────────────────────────────────────────────
+function lanzar() {
+  const a = getArmaDirecta();
+  const nModelos   = Math.max(1, parseInt(document.getElementById('num-modelos').value)||1);
+  const R          = parseInt(document.getElementById('sel-r').value);
+  const salvBase   = parseInt(document.getElementById('sel-s').value);
+  const inv        = parseInt(document.getElementById('sel-inv').value)||0;
+  const fnp        = parseInt(document.getElementById('sel-fnp').value)||0;
+  const repImp     = document.getElementById('sel-rep-imp').value;
+  const reroll1    = repImp === 'r1';
+  const rerollAll  = repImp === 'rall';
+  const rerollHer  = document.getElementById('cb-rher').checked;
+  const lethal     = document.getElementById('cb-let').checked;
+  const devast     = document.getElementById('cb-dev').checked;
+  const sustained  = document.getElementById('cb-sus').checked;
+  const cobertura  = document.getElementById('sel-cob').value === '1';
+  const modImp     = parseInt(document.getElementById('sel-mod-imp').value)||0;
+  const modHer     = parseInt(document.getElementById('sel-mod-her').value)||0;
+  const hmDirectas = Math.max(0, parseInt(document.getElementById('inp-hm-directas').value)||0);
+  const habEf      = Math.max(2, Math.min(6, a.hab - modImp));
+
+  // Paso 1: Impactos
+  const allImpactos = [], allFallosImp = [];
+  let totalA = 0;
+  for (let m = 0; m < nModelos; m++) {
+    const nA = resolverA(a.A); totalA += nA;
+    for (let i = 0; i < nA; i++) {
+      let v = d6(), repetido = false;
+      if ((rerollAll && v < habEf)||(reroll1 && v===1)) { v = d6(); repetido = true; }
+      const exito = v >= habEf, esLetal = lethal && v===6, esSus = sustained && v===6;
+      if (exito) {
+        allImpactos.push({v, repetido, esLetal, esSus});
+        if (esSus) allImpactos.push({v:'●', extraSus:true, esLetal:false});
+      } else { allFallosImp.push({v, repetido}); }
+    }
+  }
+
+  // Paso 2: Heridas
+  const objH = objHerida(a.F, R), objHEf = Math.max(2, Math.min(7, objH - modHer));
+  const heridas = [], fallosHer = [];
+  let letalesCount = 0, devastCount = 0;
+  for (const imp of allImpactos) {
+    if (imp.esLetal) { letalesCount++; continue; }
+    let v = d6(), rep = false;
+    if (rerollHer && v < objHEf) { v = d6(); rep = true; }
+    if (objHEf <= 6 && v >= objHEf) heridas.push({v, repetido:rep, esDevast: devast && v===6});
+    else fallosHer.push({v, repetido:rep});
+  }
+  devastCount = heridas.filter(h => h.esDevast).length;
+
+  // Paso 3: Salvaciones
+  const pa = a.FP, salvConPa = salvBase + Math.abs(pa);
+  const salvArmor = cobertura ? Math.max(2, salvConPa-1) : salvConPa;
+  let salvEf = (inv>0&&inv<salvArmor) ? inv : (salvArmor>6?7:salvArmor);
+  const usaInv = inv>0 && inv<salvArmor;
+  const salvVal = salvEf >= 7 ? '—' : `${salvEf}+`;
+  const heridasNorm = heridas.filter(h => !h.esDevast);
+  const herSinSalvar = [], dadosSalv = []; let salvExito = 0;
+  for (const h of heridasNorm) {
+    const v = d6(); dadosSalv.push(v);
+    if (salvEf<=6 && v>=salvEf) salvExito++;
+    else herSinSalvar.push(h);
+  }
+
+  // Paso 4: Daño + FNP
+  let dañoFinal = 0, fnpBloq = 0;
+  const dañosRoll = [], mortales = letalesCount + devastCount;
+  for (let i = 0; i < mortales; i++) {
+    if (fnp>0 && d6()>=fnp) fnpBloq++; else dañoFinal++;
+  }
+  for (const h of herSinSalvar) {
+    const dv = resolverD(a.D); dañosRoll.push(dv);
+    for (let i = 0; i < dv; i++) {
+      if (fnp>0 && d6()>=fnp) fnpBloq++; else dañoFinal++;
+    }
+  }
+  dañoFinal += hmDirectas;
+
+  // Esperanza
+  const dañoEsp = calcularEsperado(a, R, salvBase, inv, fnp, nModelos,
+    {reroll1, rerollAll, rerollHer, lethal, devast, sustained, modImp, modHer, cobertura, hmDirectas});
+
+  addToHistory({desc:`F${a.F} PA${a.FP} D${a.D} × ${nModelos}m`, modelos:nModelos, resultado:dañoFinal, esperado:dañoEsp});
+
+  // Render
+  const el = document.getElementById('resultado');
+  const repetidosImp = [...allImpactos,...allFallosImp].filter(r=>r.repetido).length;
+  const repetidosHer = [...heridas,...fallosHer].filter(r=>r.repetido).length;
+  const fpText = pa===0?'PA 0':`PA ${pa}`;
+  const salvTexto = usaInv
+    ? `Inv. ${salvEf}+ (mejor que S${salvArmor>6?'7+':salvArmor+'+'})`
+    : (salvEf>=7?'Sin salvación':`S${salvEf}+${cobertura?' (cob.)':''} (base ${salvBase}+ con ${fpText})`);
+
+  const chips = [];
+  if (modImp!==0)    chips.push({cls:'c-imp',txt:`${modImp>0?'+':''}${modImp} a impactar → hab. efectiva ${habEf}+`});
+  if (modHer!==0)    chips.push({cls:'c-her',txt:`${modHer>0?'+':''}${modHer} a herir → necesitas ${objHEf>6?'imposible':objHEf+'+'}`});
+  if (reroll1)       chips.push({cls:'c-imp',txt:`↺ Rep. 1s${repetidosImp>0?` — ${repetidosImp} repetido${repetidosImp>1?'s':''}`:' — ninguno'}`});
+  if (rerollAll)     chips.push({cls:'c-imp',txt:`↺ Rep. fallos${repetidosImp>0?` — ${repetidosImp} repetido${repetidosImp>1?'s':''}`:' — ninguno'}`});
+  if (sustained)     chips.push({cls:'c-esp',txt:`⚡ Sostenidos — ${allImpactos.filter(i=>i.esSus).length} extra`});
+  if (rerollHer)     chips.push({cls:'c-her',txt:`↺ Acoplada${repetidosHer>0?` — ${repetidosHer} repetido${repetidosHer>1?'s':''}`:' — ninguno'}`});
+  if (lethal)        chips.push({cls:'c-esp',txt:`★ Letales${letalesCount>0?` — ${letalesCount} herida${letalesCount>1?'s':''} auto`:' — ninguno'}`});
+  if (devast)        chips.push({cls:'c-esp',txt:`★ Devastadoras${devastCount>0?` — ${devastCount} mortal`:' — ninguna'}`});
+  if (cobertura)     chips.push({cls:'c-def',txt:`🌿 Cobertura — S${salvArmor<=6?salvArmor+'+':`imp.`}`});
+  if (usaInv)        chips.push({cls:'c-def',txt:`🛡 Inv. ${salvEf}+ aplicada`});
+  if (fnp>0)         chips.push({cls:'c-def',txt:`🛡 FNP ${fnp}+${fnpBloq>0?` — ${fnpBloq} bloqueada${fnpBloq>1?'s':''}`:' — ninguna'}`});
+  if (hmDirectas>0)  chips.push({cls:'c-her',txt:`💀 ${hmDirectas} HM directas`});
+
+  const cfgAtk = `${a.tipo==='cc'?'HA':'HP'}${a.hab}+ · A${a.A} · F${a.F} PA${a.FP} D${a.D}${nModelos>1?` · ${nModelos}m`:''}`;
+  const cfgDef = `R${R} S${salvBase}+${inv?` Inv${inv}+`:''}${fnp?` FNP${fnp}+`:''}`;
+
+  let html = '';
+  if (chips.length) {
+    html += `<div class="mod-resumen"><div class="mod-resumen-titulo">Modificadores aplicados</div><div class="mod-chips">${chips.map(c=>`<span class="mod-chip ${c.cls}">${c.txt}</span>`).join('')}</div></div>`;
+  }
+
+  // Paso 1
+  html += `<div class="paso"><div class="paso-titulo">Impactar ${habEf}+</div>`;
+  const renderHit = r => {
+    const cls = r.extraSus?'esp':(allImpactos.includes(r)?'ok':'ko');
+    const mark = r.esLetal?'★':(r.esSus?'⚡':(r.repetido?'↺':''));
+    return `<div class="dado ${cls}">${pipHTML(r.v)}<sup>${mark}</sup></div>`;
+  };
+  html += `<div class="dado-row">${[...allImpactos,...allFallosImp].sort((a,b)=>(b.v||0)-(a.v||0)).map(renderHit).join('')}</div>`;
+  html += `<div class="resumen-paso"><strong>${allImpactos.length} impactos</strong> de ${totalA}
+    ${repetidosImp>0?`<span class="badge">↺ ${repetidosImp} rep.</span>`:''}
+    ${allImpactos.filter(i=>i.esSus).length>0?`<span class="badge">⚡ ${allImpactos.filter(i=>i.esSus).length} extra</span>`:''}
+    ${letalesCount>0?`<span class="badge">★ ${letalesCount} letales</span>`:''}
+  </div></div><hr class="sep">`;
+
+  // Paso 2
+  const dadosParaHerir = allImpactos.filter(i=>!i.esLetal).length;
+  html += `<div class="paso"><div class="paso-titulo">Herir ${objHEf>6?'—':objHEf+'+'}</div>
+    ${dadosParaHerir===0
+      ? '<div class="resumen-paso">Sin dados — todos letales</div>'
+      : `<div class="dado-row">${[...heridas,...fallosHer].sort((a,b)=>b.v-a.v).map(r=>{
+          const mark = r.esDevast?'★':(r.repetido?'↺':'');
+          return `<div class="dado ${heridas.includes(r)?'ok':'ko'}">${pipHTML(r.v)}<sup>${mark}</sup></div>`;
+        }).join('')}</div>
+        <div class="resumen-paso"><strong>${heridas.length} heridas</strong> de ${dadosParaHerir}
+          ${[...heridas,...fallosHer].filter(r=>r.repetido).length>0?`<span class="badge">↺ ${[...heridas,...fallosHer].filter(r=>r.repetido).length} rep. (Acop.)</span>`:''}
+          ${devastCount>0?`<span class="badge">★ ${devastCount} devast.</span>`:''}
+        </div>`}
+  </div><hr class="sep">`;
+
+  // Paso 3
+  html += `<div class="paso"><div class="paso-titulo">Salvación ${salvVal}</div>
+    ${heridasNorm.length===0
+      ? '<div class="resumen-paso">Sin dados (heridas mortales)</div>'
+      : `<div class="dado-row">${dadosSalv.map(v=>`<div class="dado ${salvEf<=6&&v>=salvEf?'ok':'ko'}">${pipHTML(v)}</div>`).join('')}</div>
+         <div class="resumen-paso"><strong>${herSinSalvar.length} sin salvar</strong> (${salvExito} salvadas)${usaInv?`<span class="badge">🛡 Inv. ${salvEf}+</span>`:''}</div>`}
+  </div>`;
+
+  // Paso 4: FNP
+  if (fnp>0 && (herSinSalvar.length>0||mortales>0)) {
+    html += `<hr class="sep"><div class="paso"><div class="paso-titulo">No hay dolor ${fnp}+</div>
+      <div class="resumen-paso">${fnpBloq>0?`<strong>${fnpBloq} bloqueada${fnpBloq>1?'s':''}</strong> por FNP`:'Ninguna bloqueada'}</div>
+    </div>`;
+  }
+  if (hmDirectas>0) {
+    html += `<hr class="sep"><div class="paso"><div class="paso-titulo">HM directas</div>
+      <div class="resumen-paso"><strong>+${hmDirectas} daño</strong> por heridas mortales directas</div>
+    </div>`;
+  }
+
+  // Total + Esperanza
+  const mostrarEsp = document.getElementById('cb-esp').checked;
+  const pct = dañoEsp>0?Math.round((dañoFinal/dañoEsp)*100):100;
+  const barColor = pct>=100?'verde':pct>=60?'ambar':'rojo';
+  const barWidth = Math.min(100, pct);
+  html += `<div class="total-box">
+    <div class="total-num">${dañoFinal}</div>
+    <div class="total-lbl">daño total infligido</div>
+    ${mortales>0?`<div class="total-sub">(incluye ${mortales} herida${mortales>1?'s':''} mortal${mortales>1?'es':''})</div>`:''}
+    ${dañosRoll.length>0&&typeof a.D!=='number'?`<div class="total-sub">Dados de daño: [${dañosRoll.join(', ')}]</div>`:''}
+    ${fnpBloq>0?`<div class="total-sub">${fnpBloq} bloqueada${fnpBloq>1?'s':''} por FNP</div>`:''}
+    <div id="esp-seccion" style="display:${mostrarEsp?'block':'none'}">
+      <div class="esperanza-row">
+        <div class="esp-bloque">
+          <div class="esp-val">${dañoEsp}</div>
+          <div class="esp-lbl">Daño esperado (media)</div>
+        </div>
+        <div class="esp-bloque">
+          <div class="esp-val" style="color:${barColor==='verde'?'var(--success)':barColor==='ambar'?'var(--warn)':'var(--fail)'}">${pct}%</div>
+          <div class="esp-lbl">vs media</div>
+        </div>
+      </div>
+      <div class="barra-wrapper">
+        <div class="barra-track"><div class="barra-fill ${barColor}" style="width:${barWidth}%"></div></div>
+        <div class="barra-pct">${pct>=100?'✓ Por encima de la media':pct>=60?'~ Dentro de lo esperado':'✗ Por debajo de la media'}</div>
+      </div>
+    </div>
+  </div>`;
+  html += `<button class="btn-repetir" onclick="lanzar()">↺ &nbsp; Repetir tirada</button>`;
+
+  el.innerHTML = html;
+  document.querySelector('.res-area').scrollTop = 0;
+}
+
+// ─── HISTORIAL CAJÓN ─────────────────────────────────────────
+function abrirHistorial() {
+  document.getElementById('cajón-overlay').classList.add('visible');
+  document.getElementById('cajón-hist').classList.add('visible');
+}
+function cerrarHistorial() {
+  document.getElementById('cajón-overlay').classList.remove('visible');
+  document.getElementById('cajón-hist').classList.remove('visible');
+}
+function addToHistory(entry) {
+  const hist = loadHistory();
+  hist.unshift({...entry, ts:Date.now()});
+  if (hist.length>10) hist.pop();
+  saveHistory(hist);
+  renderHistorial();
+}
+function renderHistorial() {
+  const hist = loadHistory();
+  const cont = document.getElementById('historial-items');
+  const btn  = document.getElementById('btn-hist-flotante');
+  if (hist.length===0) { btn.classList.remove('visible'); cont.innerHTML=''; return; }
+  btn.classList.add('visible');
+  btn.innerHTML = `📋<span class="hist-badge">${hist.length}</span>`;
+  cont.innerHTML = hist.map(h => {
+    const pct = h.esperado>0?Math.round((h.resultado/h.esperado)*100):100;
+    const cls = pct>=100?'verde':pct>=60?'ambar':'rojo';
+    const hora = new Date(h.ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="hist-item">
+      <div class="hist-info">
+        <div class="hist-nombre">${h.desc}</div>
+        <div class="hist-sub">${h.modelos} modelo${h.modelos>1?'s':''} · ${hora}</div>
+      </div>
+      <div class="hist-nums">
+        <div class="hist-daño">${h.resultado}</div>
+        <div class="hist-esp">esp. ${h.esperado}</div>
+        <div class="hist-pct ${cls}">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function limpiarHistorial() { saveHistory([]); renderHistorial(); cerrarHistorial(); }
+
+// ─── ESPERANZA TOGGLE ─────────────────────────────────────────
+function saveEsperanzaPref() { localStorage.setItem(LS_SHOW_ESP, document.getElementById('cb-esp').checked?'1':'0'); }
+function toggleEsperanza() {
+  const el = document.getElementById('esp-seccion');
+  if (el) el.style.display = document.getElementById('cb-esp').checked?'block':'none';
+}
+
+// ─── PERFILES ATACANTE ────────────────────────────────────────
+function guardarPerfilAtacante() {
+  const inp = document.getElementById('inp-nombre-perfil-atk');
+  const nombre = inp.value.trim();
+  if (!nombre) { alert('Escribe un nombre para el perfil.'); return; }
+  inp.value = '';
+  const profiles = loadAtkProfiles();
+  const perfil = {
+    id: editandoPerfilAtkId || uid(), nombre,
+    tipo: document.getElementById('atk-tipo').value,
+    hab:  document.getElementById('atk-hab').value,
+    A:    document.getElementById('atk-A').value,
+    F:    document.getElementById('atk-F').value,
+    FP:   document.getElementById('atk-FP').value,
+    D:    document.getElementById('atk-D').value,
+    modelos: parseInt(document.getElementById('num-modelos').value)||1,
+    repImp:document.getElementById('sel-rep-imp').value,
+    rher:  document.getElementById('cb-rher').checked,
+    lethal:document.getElementById('cb-let').checked,
+    devast:document.getElementById('cb-dev').checked,
+    sus:   document.getElementById('cb-sus').checked,
+    modImp:document.getElementById('sel-mod-imp').value,
+    modHer:document.getElementById('sel-mod-her').value,
+    hmDir: document.getElementById('inp-hm-directas').value
+  };
+  if (editandoPerfilAtkId) {
+    const idx = profiles.findIndex(p=>p.id===editandoPerfilAtkId);
+    if (idx!==-1) profiles[idx]=perfil; else profiles.push(perfil);
+    editandoPerfilAtkId = null;
+  } else { profiles.push(perfil); }
+  saveAtkProfiles(profiles);
+  refrescarDropdownPerfilesAtk();
+  document.getElementById('sel-perfil-atk').value = perfil.id;
+  const btn = document.getElementById('btn-guardar-perfil-atk');
+  btn.textContent = '✓ Guardado';
+  setTimeout(()=>{ btn.textContent='💾 Guardar'; }, 1500);
+}
+function cargarPerfilAtacante() {
+  editandoPerfilAtkId = null;
+  document.getElementById('btn-guardar-perfil-atk').textContent = '💾 Guardar';
+  const id = document.getElementById('sel-perfil-atk').value;
+  const p = loadAtkProfiles().find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('atk-tipo').value  = p.tipo  ||'dist';
+  document.getElementById('atk-hab').value   = p.hab   ||'3';
+  document.getElementById('atk-A').value     = p.A     ||'2';
+  document.getElementById('atk-F').value     = p.F     ||'4';
+  document.getElementById('atk-FP').value    = p.FP    ||'0';
+  document.getElementById('atk-D').value     = p.D     ||'1';
+  document.getElementById('num-modelos').value = p.modelos||1;
+  document.getElementById('sel-rep-imp').value = p.repImp||'0'; syncChipSel('chip-rep-imp','sel-rep-imp');
+  document.getElementById('cb-rher').checked = p.rher;  syncChip('tc-rher','cb-rher');
+  document.getElementById('cb-let').checked  = p.lethal;syncChip('tc-let','cb-let');
+  document.getElementById('cb-dev').checked  = p.devast;syncChip('tc-dev','cb-dev');
+  document.getElementById('cb-sus').checked  = p.sus;   syncChip('tc-sus','cb-sus');
+  document.getElementById('sel-mod-imp').value = p.modImp||'0';
+  document.getElementById('sel-mod-her').value = p.modHer||'0';
+  document.getElementById('inp-hm-directas').value = p.hmDir||0;
+  actualizarResumen();
+}
+function editarPerfilAtacante() {
+  const id = document.getElementById('sel-perfil-atk').value;
+  const p = loadAtkProfiles().find(x=>x.id===id);
+  if (!p) return;
+  cargarPerfilAtacante(); editandoPerfilAtkId = id;
+  document.getElementById('inp-nombre-perfil-atk').value = p.nombre;
+  document.getElementById('btn-guardar-perfil-atk').textContent = '✏️ Actualizar';
+}
+function eliminarPerfilAtacante() {
+  const id = document.getElementById('sel-perfil-atk').value;
+  if (!id||!confirm('¿Eliminar este perfil?')) return;
+  if (editandoPerfilAtkId===id) { editandoPerfilAtkId=null; document.getElementById('btn-guardar-perfil-atk').textContent='💾 Guardar'; }
+  saveAtkProfiles(loadAtkProfiles().filter(p=>p.id!==id));
+  refrescarDropdownPerfilesAtk();
+}
+function refrescarDropdownPerfilesAtk() {
+  const sel = document.getElementById('sel-perfil-atk');
+  sel.innerHTML = '<option value="">— Sin perfil —</option>';
+  loadAtkProfiles().forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.nombre; sel.appendChild(o); });
+}
+
+// ─── PERFILES DEFENSOR ────────────────────────────────────────
+function guardarPerfilDefensor() {
+  const inp = document.getElementById('inp-nombre-perfil-def');
+  const nombre = inp.value.trim();
+  if (!nombre) { alert('Escribe un nombre para el perfil.'); return; }
+  inp.value = '';
+  const defs = loadCustomDefs();
+  const perfil = {
+    id: editandoPerfilDefId||uid(), nombre,
+    R: parseInt(document.getElementById('sel-r').value),
+    S: parseInt(document.getElementById('sel-s').value),
+    inv: parseInt(document.getElementById('sel-inv').value)||0,
+    fnp: parseInt(document.getElementById('sel-fnp').value)||0
+  };
+  if (editandoPerfilDefId) {
+    const idx = defs.findIndex(d=>d.id===editandoPerfilDefId);
+    if (idx!==-1) defs[idx]=perfil; else defs.push(perfil);
+    editandoPerfilDefId = null;
+  } else { defs.push(perfil); }
+  saveCustomDefs(defs);
+  refrescarDropdownPerfiles();
+  document.getElementById('sel-perfil-def').value = perfil.id;
+  const btn = document.getElementById('btn-guardar-perfil-def');
+  btn.textContent='✓ Guardado';
+  setTimeout(()=>{ btn.textContent='💾 Guardar'; },1500);
+}
+function cargarPerfilDefensor() {
+  editandoPerfilDefId = null;
+  document.getElementById('btn-guardar-perfil-def').textContent = '💾 Guardar';
+  const id = document.getElementById('sel-perfil-def').value;
+  const def = loadCustomDefs().find(d=>d.id===id);
+  if (!def) return;
+  document.getElementById('sel-r').value   = def.R;
+  document.getElementById('sel-s').value   = def.S;
+  document.getElementById('sel-inv').value = def.inv||0;
+  document.getElementById('sel-fnp').value = def.fnp||0;
+  syncChipSel('chip-fnp','sel-fnp');
+  actualizarResumen();
+}
+function editarPerfilDefensor() {
+  const id = document.getElementById('sel-perfil-def').value;
+  const def = loadCustomDefs().find(d=>d.id===id);
+  if (!def) return;
+  cargarPerfilDefensor(); editandoPerfilDefId = id;
+  document.getElementById('inp-nombre-perfil-def').value = def.nombre;
+  document.getElementById('btn-guardar-perfil-def').textContent = '✏️ Actualizar';
+}
+function eliminarPerfilDefensor() {
+  const id = document.getElementById('sel-perfil-def').value;
+  if (!id||!confirm('¿Eliminar este perfil?')) return;
+  if (editandoPerfilDefId===id) { editandoPerfilDefId=null; document.getElementById('btn-guardar-perfil-def').textContent='💾 Guardar'; }
+  saveCustomDefs(loadCustomDefs().filter(d=>d.id!==id));
+  refrescarDropdownPerfiles();
+}
+function refrescarDropdownPerfiles() {
+  const sel = document.getElementById('sel-perfil-def');
+  sel.innerHTML = '<option value="">— Sin perfil —</option>';
+  loadCustomDefs().forEach(d=>{ const o=document.createElement('option'); o.value=d.id; o.textContent=`${d.nombre} (R${d.R} S${d.S}+${d.inv?` Inv${d.inv}+`:''})`; sel.appendChild(o); });
+}
+</script>
+</body>
+</html>
