@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rastreador W40k">
+<meta name="theme-color" content="#1a2236">
+<title>Rastreador — W40k</title>
+<style>
+:root {
+  --bg: #1a2236; --surface: #212d42; --surface2: #2a3a52;
+  --accent: #2563eb; --accent2: #6baaf5; --gold: #6baaf5;
+  --text: #e8edf5; --muted: #8494ae;
+  --success: #22c47a; --fail: #f56060; --warn: #e8a030;
+  --border: #2d3a52; --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ── HEADER ─────────────────────────────────── */
+.hdr {
+  display: flex; align-items: center; padding: 7px 12px;
+  border-bottom: 3px solid var(--accent); flex-shrink: 0;
+  background: var(--surface); gap: 6px; min-height: 46px;
+}
+.hdr-title {
+  flex: 1; color: var(--accent2); font-size: 0.7rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; padding: 5px 10px; font-size: 0.72rem;
+  cursor: pointer; touch-action: manipulation; white-space: nowrap;
+  flex-shrink: 0; min-height: 34px;
+}
+.hdr-btn.accent { border-color: var(--accent); color: var(--accent2); }
+.hdr-btn.danger { border-color: var(--fail); color: var(--fail); }
+.hdr-btn.success { border-color: var(--success); color: var(--success); }
+
+/* ── PANTALLA ───────────────────────────────── */
+.screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; }
+
+/* ── COMUNES ────────────────────────────────── */
+.sec-titulo {
+  font-size: 0.65rem; color: var(--gold); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.form-label { display: block; font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.form-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 8px 12px;
+  font-size: 0.85rem; min-height: 38px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.form-campo { margin-bottom: 10px; }
+.btn-full {
+  width: 100%; padding: 13px; border: none; border-radius: var(--radius);
+  font-size: 0.85rem; font-weight: bold; letter-spacing: 1.5px;
+  cursor: pointer; touch-action: manipulation; text-transform: uppercase;
+}
+.btn-full.accent  { background: var(--accent); color: white; }
+.btn-full.dashed  { background: rgba(37,99,235,0.08); color: var(--accent2); border: 1px dashed rgba(37,99,235,0.4); font-weight: 500; }
+.btn-full.ghost   { background: none; color: var(--muted); border: 1px dashed var(--border); font-weight: 400; }
+
+/* ── HOME ───────────────────────────────────── */
+.army-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 12px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.army-card-info { flex: 1; min-width: 0; }
+.army-card-nombre { font-size: 0.88rem; font-weight: 500; color: var(--text); }
+.army-card-sub { font-size: 0.68rem; color: var(--muted); margin-top: 3px; }
+.army-del {
+  background: none; border: 1px solid rgba(245,96,96,0.3); color: var(--fail);
+  border-radius: 6px; padding: 5px 10px; font-size: 0.7rem;
+  cursor: pointer; touch-action: manipulation; flex-shrink: 0; min-height: 32px;
+}
+.nuevo-form {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; margin-bottom: 8px;
+}
+
+/* ── ARMY (lista unidades) ──────────────────── */
+.unit-row {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 6px; display: flex; align-items: stretch;
+}
+.unit-row-tap {
+  flex: 1; padding: 10px 12px;
+  cursor: pointer; touch-action: manipulation; min-width: 0;
+}
+.unit-row-nombre { font-size: 0.83rem; font-weight: 500; color: var(--text); }
+.unit-row-sub { font-size: 0.63rem; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unit-row-btns { display: flex; flex-direction: column; border-left: 1px solid var(--border); flex-shrink: 0; }
+.unit-btn {
+  flex: 1; background: none; border: none; color: var(--muted);
+  padding: 0 12px; font-size: 0.78rem; cursor: pointer; touch-action: manipulation;
+}
+.unit-btn.del { color: var(--fail); border-top: 1px solid var(--border); }
+
+/* ── EDITOR ─────────────────────────────────── */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 10px;
+}
+.toggle-info { flex: 1; }
+.toggle-lbl { font-size: 0.83rem; color: var(--text); }
+.toggle-sub { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+.toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 26px; cursor: pointer; transition: background 0.2s;
+}
+.toggle-track:before {
+  content: ''; position: absolute; width: 20px; height: 20px;
+  left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-track { background: var(--accent); }
+.toggle input:checked + .toggle-track:before { transform: translateX(18px); background: white; }
+
+.grupo-editor {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+}
+.grupo-editor-hdr { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+.grupo-num { font-size: 0.62rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; flex: 1; }
+.grupo-del {
+  background: none; border: 1px solid rgba(245,96,96,0.3); color: var(--fail);
+  border-radius: 5px; padding: 3px 8px; font-size: 0.68rem; cursor: pointer; touch-action: manipulation;
+}
+.stats-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; margin-bottom: 8px; }
+.sc { display: flex; flex-direction: column; gap: 2px; }
+.sl { font-size: 0.5rem; color: var(--muted); text-transform: uppercase; text-align: center; }
+.sv {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  border-radius: 5px; padding: 3px 2px; font-size: 0.78rem;
+  text-align: center; min-height: 34px; width: 100%; -webkit-appearance: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.cantidad-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.cantidad-lbl { font-size: 0.68rem; color: var(--muted); flex: 1; }
+.cantidad-in {
+  width: 64px; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 5px; padding: 4px 8px;
+  font-size: 0.88rem; text-align: center; min-height: 34px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35), inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.total-mini {
+  font-size: 0.7rem; color: var(--muted); text-align: center;
+  margin: 4px 0 10px; padding: 6px;
+  background: var(--surface); border-radius: 6px; border: 1px solid var(--border);
+}
+.total-mini strong { color: var(--text); }
+
+/* ── GAME ───────────────────────────────────── */
+.sync-banner {
+  background: rgba(34,196,122,0.07); border: 1px solid rgba(34,196,122,0.25);
+  border-radius: 6px; padding: 5px 10px; margin-bottom: 8px;
+  font-size: 0.7rem; color: var(--success); text-align: center;
+}
+.game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 20px; }
+
+.u-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.u-card.activa  { border: 2px solid var(--accent); }
+.u-card.eliminada { opacity: 0.38; }
+.u-card-hdr {
+  padding: 7px 9px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 5px;
+}
+.u-card-nombre { flex: 1; font-size: 0.78rem; font-weight: 500; color: var(--text); }
+.u-sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; flex-shrink: 0; }
+.u-card.activa .u-sync-dot { display: inline-block; }
+
+.grupo-game { padding: 5px 8px 6px; border-bottom: 1px solid var(--border); }
+.grupo-game-hdr {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 4px;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.g-ico {
+  font-size: 0.62rem; flex-shrink: 0; border-radius: 4px; padding: 1px 4px;
+  background: rgba(37,99,235,0.12); border: 1px solid rgba(37,99,235,0.25); color: var(--accent2);
+}
+.g-ico.cc { background: rgba(245,96,96,0.1); border-color: rgba(245,96,96,0.25); color: #f07070; }
+.g-nombre { font-size: 0.62rem; color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-stats  { font-size: 0.58rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.g-sync   { font-size: 0.6rem; color: var(--success); display: none; flex-shrink: 0; }
+.u-card.activa .grupo-game.synced .g-sync { display: inline; }
+
+.dots-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+.mdot {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--accent2); background: rgba(107,170,245,0.12);
+  cursor: pointer; touch-action: manipulation; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; color: var(--accent2); -webkit-tap-highlight-color: transparent;
+}
+.mdot.lider  { border-color: var(--warn); color: var(--warn); background: rgba(232,160,48,0.1); }
+.mdot.muerto { border-color: var(--fail); background: rgba(245,96,96,0.06); color: var(--fail); opacity: 0.5; }
+
+.u-card-footer {
+  padding: 5px 9px 7px; display: flex; justify-content: space-between; align-items: center;
+}
+.u-contador { font-size: 0.72rem; color: var(--muted); }
+.u-contador strong { color: var(--text); font-size: 0.9rem; }
+.u-reset { background: none; border: none; color: var(--muted); font-size: 0.6rem; cursor: pointer; touch-action: manipulation; }
+</style>
+</head>
+<body>
+<div class="hdr" id="hdr"></div>
+<div class="screen" id="screen"></div>
+
+<script>
+// ── CONSTANTES ──────────────────────────────────────────────
+const LS_ARMIES = 'w40k_armies_v2';
+const LS_STATE  = 'w40k_rastr_state';
+const LS_SYNC   = 'w40k_sync';
+
+// ── HELPERS ─────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// Crea un grupo con modelos
+function mkGrupo(nombre, tipo, hab, A, F, FP, D, cnt) {
+  return {
+    id: uid(), nombre, tipo, hab,
+    A: String(A), F, FP, D: String(D),
+    modelos: Array.from({ length: cnt }, () => ({ id: uid(), vivo: true }))
+  };
+}
+
+// ── EJÉRCITO AELDARI POR DEFECTO ────────────────────────────
+function crearEjAeldari() {
+  const mk = (nombre, lider, grupos) => ({ id: uid(), nombre, lider: !!lider, grupos });
+  const g  = mkGrupo;
+  return {
+    id: uid(), nombre: 'Tormenta de Destino', faccion: 'Aeldari',
+    unidades: [
+      mk('Vidente', true, [g('Pistola shuriken', 'dist', 2, '1', 4, -1, '1', 1)]),
+      mk('Guard. Defensa', false, [
+        g('Catapulta shuriken', 'dist', 3, '2', 4, -1, '1', 10),
+        g('Cañón estelar (plat.)', 'dist', 3, '2', 8, -3, '2', 1),
+      ]),
+      mk('Guard. Asalto', false, [
+        g('Catapulta shuriken', 'dist', 3, '2', 4, -1, '1', 11),
+      ]),
+      mk('Baharroth', true, [g('Lanzas del Sol', 'cc', 2, '6', 4, -1, '1', 1)]),
+      mk('Vengadores', false, [
+        g('Catapulta Vengador', 'dist', 3, '4', 4, -1, '1', 5),
+      ]),
+      mk('Espectros', false, [
+        g('Garras de banshee', 'cc', 3, '4', 3, -1, '1', 4),
+        g('Arma energía (exarca)', 'cc', 3, '3', 4, -1, '1', 1),
+      ]),
+      mk('Arañas Disformidad', false, [
+        g('Monofilamento std', 'dist', 3, '2D6', 4, -2, '1', 5),
+      ]),
+      mk('Jinetes del Viento', false, [
+        g('Catapulta doble', 'dist', 3, '3', 4, -1, '1', 5),
+        g('Láser multitubo', 'dist', 3, '6', 5, 0, '1', 1),
+      ]),
+      mk('Filos Espectrales', false, [
+        g('Lanza — impacto', 'cc', 3, '3', 6, -2, '2', 4),
+        g('Lanza — barrido', 'cc', 3, '6', 4, -1, '1', 1),
+      ]),
+    ]
+  };
+}
+
+// ── ESTADO ──────────────────────────────────────────────────
+let armies  = {};
+let st      = { screen: 'home', ejId: null, activa: null, editId: null };
+let editUnit = null;
+let nuevoArmyForm = false;
+
+function initData() {
+  try { armies = JSON.parse(localStorage.getItem(LS_ARMIES) || '{}'); } catch(e) { armies = {}; }
+  if (Object.keys(armies).length === 0) {
+    const a = crearEjAeldari();
+    armies[a.id] = a;
+    saveArmies();
+  }
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_STATE) || 'null');
+    if (s) st = { ...st, ...s };
+  } catch(e) {}
+  if (!armies[st.ejId]) { st.ejId = null; st.screen = 'home'; }
+}
+
+function saveArmies() { try { localStorage.setItem(LS_ARMIES, JSON.stringify(armies)); } catch(e) {} }
+function saveSt()     { try { localStorage.setItem(LS_STATE,  JSON.stringify(st));     } catch(e) {} }
+function ejercito()   { return armies[st.ejId]; }
+
+// ── SYNC AL LANZADOR ────────────────────────────────────────
+function syncLanzador(unit, grupo) {
+  const vivos = grupo.modelos.filter(m => m.vivo).length;
+  try {
+    localStorage.setItem(LS_SYNC, JSON.stringify({
+      nombre: unit.nombre, perfil: grupo.nombre,
+      tipo: grupo.tipo, hab: grupo.hab,
+      A: grupo.A, F: grupo.F, FP: grupo.FP, D: grupo.D,
+      modelos: vivos
+    }));
+  } catch(e) {}
+  st.activa = { unitId: unit.id, grupoId: grupo.id };
+  saveSt();
+}
+
+// ── HEADER ──────────────────────────────────────────────────
+function renderHeader() {
+  const hdr = document.getElementById('hdr');
+  const ej  = ejercito();
+  if (st.screen === 'home') {
+    hdr.innerHTML = `<span class="hdr-title">⚔ W40k — Mis ejércitos</span>`;
+  } else if (st.screen === 'army') {
+    hdr.innerHTML = `
+      <button class="hdr-btn" onclick="irHome()">← Ejércitos</button>
+      <span class="hdr-title">${ej ? ej.nombre : ''}</span>
+      <button class="hdr-btn accent" onclick="irGame()">⚄ Jugar</button>`;
+  } else if (st.screen === 'unit-editor') {
+    hdr.innerHTML = `
+      <button class="hdr-btn" onclick="irArmy()">← ${ej ? ej.nombre : ''}</button>
+      <span class="hdr-title">${st.editId ? 'Editar unidad' : 'Nueva unidad'}</span>
+      <button class="hdr-btn success" onclick="guardarUnidad()">✓ Guardar</button>`;
+  } else if (st.screen === 'game') {
+    hdr.innerHTML = `
+      <button class="hdr-btn" onclick="irArmy()">← Lista</button>
+      <span class="hdr-title">${ej ? ej.nombre : ''}</span>
+      <button class="hdr-btn danger" onclick="reiniciarPartida()">↺ Reiniciar</button>`;
+  }
+}
+
+// ── PANTALLA: HOME ───────────────────────────────────────────
+function renderHome() {
+  const scr = document.getElementById('screen');
+  let h = `<div class="sec-titulo">Ejércitos guardados</div>`;
+
+  Object.values(armies).forEach(a => {
+    const nU = a.unidades.length;
+    const nM = a.unidades.reduce((s, u) => s + u.grupos.reduce((s2, g) => s2 + g.modelos.length, 0), 0);
+    h += `<div class="army-card" onclick="irEjercito('${a.id}')">
+      <div class="army-card-info">
+        <div class="army-card-nombre">${a.nombre}</div>
+        <div class="army-card-sub">${a.faccion} &middot; ${nU} unidad${nU!==1?'es':''} &middot; ${nM} miniatura${nM!==1?'s':''}</div>
+      </div>
+      <button class="army-del" onclick="event.stopPropagation();eliminarEjercito('${a.id}')">✕</button>
+    </div>`;
+  });
+
+  if (!nuevoArmyForm) {
+    h += `<button class="btn-full dashed" style="margin-top:6px" onclick="toggleNuevoArmy()">+ Nuevo ejército</button>`;
+  } else {
+    h += `<div class="nuevo-form">
+      <div class="form-campo">
+        <label class="form-label">Nombre del ejército</label>
+        <input class="form-input" id="inp-a-nombre" placeholder="Ej. Ultramarines — Javier">
+      </div>
+      <div class="form-campo">
+        <label class="form-label">Facción</label>
+        <input class="form-input" id="inp-a-faccion" placeholder="Ej. Ultramarines, Necrones…">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn-full accent" style="flex:1" onclick="crearEjercito()">Crear</button>
+        <button class="btn-full ghost" style="flex:1" onclick="toggleNuevoArmy()">Cancelar</button>
+      </div>
+    </div>`;
+  }
+  scr.innerHTML = h;
+  if (nuevoArmyForm) document.getElementById('inp-a-nombre').focus();
+}
+
+function toggleNuevoArmy() { nuevoArmyForm = !nuevoArmyForm; renderHome(); }
+
+function crearEjercito() {
+  const nombre  = (document.getElementById('inp-a-nombre')?.value || '').trim();
+  const faccion = (document.getElementById('inp-a-faccion')?.value || '').trim();
+  if (!nombre) { alert('Ponle un nombre al ejército'); return; }
+  const a = { id: uid(), nombre, faccion: faccion || 'Sin facción', unidades: [] };
+  armies[a.id] = a;
+  saveArmies();
+  nuevoArmyForm = false;
+  irEjercito(a.id);
+}
+
+function eliminarEjercito(id) {
+  const a = armies[id];
+  if (!a || !confirm(`¿Eliminar "${a.nombre}" y todas sus unidades?`)) return;
+  delete armies[id];
+  saveArmies();
+  if (st.ejId === id) { st.ejId = null; st.screen = 'home'; }
+  render();
+}
+
+// ── PANTALLA: ARMY ───────────────────────────────────────────
+function renderArmy() {
+  const scr = document.getElementById('screen');
+  const ej  = ejercito();
+  if (!ej) { irHome(); return; }
+
+  let h = `<div class="sec-titulo">${ej.unidades.length} unidad${ej.unidades.length!==1?'es':''}</div>`;
+
+  if (ej.unidades.length === 0) {
+    h += `<div style="text-align:center;color:var(--muted);padding:24px 0;font-size:0.83rem">Sin unidades aún. Añade la primera.</div>`;
+  }
+
+  ej.unidades.forEach(u => {
+    const nM       = u.grupos.reduce((s, g) => s + g.modelos.length, 0);
+    const gruposTxt = u.grupos.map(g => `${g.nombre} ×${g.modelos.length}`).join(' · ');
+    h += `<div class="unit-row">
+      <div class="unit-row-tap" onclick="editarUnidad('${u.id}')">
+        <div class="unit-row-nombre">${u.lider ? '★ ' : ''}${u.nombre}</div>
+        <div class="unit-row-sub">${nM} mod. &nbsp;·&nbsp; ${gruposTxt}</div>
+      </div>
+      <div class="unit-row-btns">
+        <button class="unit-btn" onclick="editarUnidad('${u.id}')">✏️</button>
+        <button class="unit-btn del" onclick="eliminarUnidad('${u.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+
+  h += `<button class="btn-full dashed" style="margin-top:6px" onclick="nuevaUnidad()">+ Añadir unidad</button>`;
+  if (ej.unidades.length > 0) {
+    h += `<button class="btn-full accent" style="margin-top:8px" onclick="irGame()">⚄ Jugar</button>`;
+  }
+  scr.innerHTML = h;
+}
+
+function nuevaUnidad() {
+  st.editId = null;
+  editUnit  = {
+    nombre: '', lider: false,
+    grupos: [{ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1 }]
+  };
+  st.screen = 'unit-editor'; saveSt(); render();
+}
+
+function editarUnidad(unitId) {
+  const ej   = ejercito();
+  const unit = ej && ej.unidades.find(u => u.id === unitId);
+  if (!unit) return;
+  st.editId = unitId;
+  editUnit  = {
+    nombre: unit.nombre,
+    lider:  unit.lider,
+    grupos: unit.grupos.map(g => ({
+      id: g.id, nombre: g.nombre, tipo: g.tipo, hab: g.hab,
+      A: g.A, F: g.F, FP: g.FP, D: g.D, cantidad: g.modelos.length
+    }))
+  };
+  st.screen = 'unit-editor'; saveSt(); render();
+}
+
+function eliminarUnidad(unitId) {
+  const ej = ejercito(); if (!ej) return;
+  const u  = ej.unidades.find(x => x.id === unitId);
+  if (!u || !confirm(`¿Eliminar "${u.nombre}"?`)) return;
+  ej.unidades = ej.unidades.filter(x => x.id !== unitId);
+  saveArmies(); render();
+}
+
+// ── PANTALLA: EDITOR DE UNIDAD ───────────────────────────────
+function renderUnitEditor() {
+  const scr = document.getElementById('screen');
+  if (!editUnit) { irArmy(); return; }
+
+  const total = editUnit.grupos.reduce((s, g) => s + (parseInt(g.cantidad) || 0), 0);
+
+  let h = `
+    <div style="margin-bottom:14px">
+      <div class="form-campo">
+        <label class="form-label">Nombre de la unidad</label>
+        <input class="form-input" id="ed-nombre" placeholder="Ej. Escuadra Táctica" value="${editUnit.nombre}">
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-lbl">★ Es un líder</div>
+          <div class="toggle-sub">Personaje que se adjunta a otra unidad</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="ed-lider" ${editUnit.lider ? 'checked' : ''}>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="sec-titulo">Grupos de armas</div>`;
+
+  editUnit.grupos.forEach((g, gi) => { h += grupoEditorHtml(g, gi); });
+
+  h += `
+    <button class="btn-full dashed" onclick="addGrupo()" style="margin-bottom:10px">+ Añadir grupo de armas</button>
+    <div class="total-mini" id="total-preview">
+      Total: <strong>${total}</strong> miniatura${total !== 1 ? 's' : ''}
+    </div>
+    <button class="btn-full accent" onclick="guardarUnidad()" style="margin-bottom:20px">✓ Guardar unidad</button>`;
+
+  scr.innerHTML = h;
+}
+
+function grupoEditorHtml(g, gi) {
+  const canDel = editUnit.grupos.length > 1;
+  return `<div class="grupo-editor">
+    <div class="grupo-editor-hdr">
+      <span class="grupo-num">Grupo ${gi + 1}</span>
+      ${canDel ? `<button class="grupo-del" onclick="delGrupo(${gi})">✕ Eliminar grupo</button>` : ''}
+    </div>
+    <div class="form-campo" style="margin-bottom:8px">
+      <label class="form-label">Nombre del arma</label>
+      <input class="form-input" placeholder="Ej. Bólter, Lanzallamas" value="${g.nombre}"
+        oninput="updGrupo(${gi},'nombre',this.value)">
+    </div>
+    <div class="stats-grid">
+      <div class="sc">
+        <select class="sv" onchange="updGrupo(${gi},'tipo',this.value)">
+          <option value="dist" ${g.tipo==='dist'?'selected':''}>🏹</option>
+          <option value="cc"   ${g.tipo==='cc'  ?'selected':''}>⚔️</option>
+        </select>
+        <span class="sl">Tipo</span>
+      </div>
+      <div class="sc">
+        <select class="sv" onchange="updGrupo(${gi},'hab',+this.value)">
+          ${[2,3,4,5,6].map(v=>`<option value="${v}" ${g.hab===v?'selected':''}>${v}+</option>`).join('')}
+        </select>
+        <span class="sl">HP/HA</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="text" placeholder="A" value="${g.A}" oninput="updGrupo(${gi},'A',this.value)">
+        <span class="sl">Ataques</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="number" min="1" max="20" value="${g.F}" oninput="updGrupo(${gi},'F',+this.value||4)">
+        <span class="sl">Fuerza</span>
+      </div>
+      <div class="sc">
+        <select class="sv" onchange="updGrupo(${gi},'FP',+this.value)">
+          ${[0,-1,-2,-3,-4,-5,-6].map(v=>`<option value="${v}" ${g.FP===v?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <span class="sl">PA</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="text" placeholder="D" value="${g.D}" oninput="updGrupo(${gi},'D',this.value)">
+        <span class="sl">Daño</span>
+      </div>
+    </div>
+    <div class="cantidad-row">
+      <span class="cantidad-lbl">Miniaturas con esta arma</span>
+      <input class="cantidad-in" type="number" min="0" max="200" value="${g.cantidad}"
+        oninput="updGrupo(${gi},'cantidad',+this.value||0);actualizarTotal()">
+    </div>
+  </div>`;
+}
+
+function updGrupo(gi, campo, valor) {
+  if (editUnit && editUnit.grupos[gi] !== undefined) editUnit.grupos[gi][campo] = valor;
+}
+
+function actualizarTotal() {
+  if (!editUnit) return;
+  const total = editUnit.grupos.reduce((s, g) => s + (g.cantidad || 0), 0);
+  const el = document.getElementById('total-preview');
+  if (el) el.innerHTML = `Total: <strong>${total}</strong> miniatura${total !== 1 ? 's' : ''}`;
+}
+
+function syncFormMemoria() {
+  if (!editUnit) return;
+  const n = document.getElementById('ed-nombre');
+  if (n) editUnit.nombre = n.value;
+  const l = document.getElementById('ed-lider');
+  if (l) editUnit.lider = l.checked;
+}
+
+function addGrupo() {
+  syncFormMemoria();
+  editUnit.grupos.push({ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1 });
+  renderUnitEditor();
+}
+
+function delGrupo(gi) {
+  syncFormMemoria();
+  editUnit.grupos.splice(gi, 1);
+  renderUnitEditor();
+}
+
+function guardarUnidad() {
+  syncFormMemoria();
+  if (!editUnit.nombre.trim()) { alert('Ponle un nombre a la unidad'); return; }
+  if (!editUnit.grupos.length) { alert('Añade al menos un grupo de armas'); return; }
+  if (editUnit.grupos.every(g => !g.cantidad)) { alert('Al menos un grupo necesita 1 miniatura'); return; }
+
+  const ej = ejercito(); if (!ej) return;
+  const oldUnit = st.editId ? ej.unidades.find(u => u.id === st.editId) : null;
+
+  const grupos = editUnit.grupos.map(eg => {
+    const oldG   = oldUnit && oldUnit.grupos.find(og => og.id === eg.id);
+    const cnt    = eg.cantidad || 0;
+    let modelos;
+    if (oldG) {
+      modelos = [];
+      for (let i = 0; i < cnt; i++) {
+        if (i < oldG.modelos.length) modelos.push({ id: oldG.modelos[i].id, vivo: oldG.modelos[i].vivo });
+        else modelos.push({ id: uid(), vivo: true });
+      }
+    } else {
+      modelos = Array.from({ length: cnt }, () => ({ id: uid(), vivo: true }));
+    }
+    return {
+      id: eg.id, nombre: eg.nombre || 'Arma', tipo: eg.tipo, hab: eg.hab,
+      A: String(eg.A || 1), F: eg.F || 4, FP: eg.FP || 0, D: String(eg.D || 1), modelos
+    };
+  });
+
+  const unit = {
+    id: st.editId || uid(),
+    nombre: editUnit.nombre.trim(),
+    lider: !!editUnit.lider,
+    grupos
+  };
+
+  if (st.editId) {
+    const idx = ej.unidades.findIndex(u => u.id === st.editId);
+    if (idx >= 0) ej.unidades[idx] = unit; else ej.unidades.push(unit);
+  } else {
+    ej.unidades.push(unit);
+  }
+
+  saveArmies();
+  irArmy();
+}
+
+// ── PANTALLA: GAME ───────────────────────────────────────────
+function renderGame() {
+  const scr = document.getElementById('screen');
+  const ej  = ejercito();
+  if (!ej) { irArmy(); return; }
+
+  let banner = '';
+  if (st.activa) {
+    const unit  = ej.unidades.find(u => u.id === st.activa.unitId);
+    const grupo = unit && unit.grupos.find(g => g.id === st.activa.grupoId);
+    if (unit && grupo) {
+      const vivos = grupo.modelos.filter(m => m.vivo).length;
+      banner = `<div class="sync-banner">⚡ <strong>${unit.nombre}</strong> — ${grupo.nombre} &middot; ${vivos} modelo${vivos!==1?'s':''}</div>`;
+    }
+  }
+
+  let cards = '';
+  ej.unidades.forEach(u => {
+    const totalV   = u.grupos.reduce((s, g) => s + g.modelos.filter(m => m.vivo).length, 0);
+    const totalM   = u.grupos.reduce((s, g) => s + g.modelos.length, 0);
+    const esActiva = st.activa && st.activa.unitId === u.id;
+
+    let gruposHtml = '';
+    u.grupos.forEach(g => {
+      const esSync = esActiva && st.activa.grupoId === g.id;
+      const icoCls = g.tipo === 'dist' ? '' : ' cc';
+      const icoSym = g.tipo === 'dist' ? '🏹' : '⚔️';
+      const dots   = g.modelos.map((m, mi) => {
+        const cls = (!m.vivo ? ' muerto' : '') + (u.lider ? ' lider' : '');
+        const sym = !m.vivo ? '✕' : (u.lider ? '★' : '');
+        return `<div class="mdot${cls}" onclick="toggleModelo('${u.id}','${g.id}',${mi})">${sym}</div>`;
+      }).join('');
+
+      gruposHtml += `<div class="grupo-game${esSync ? ' synced' : ''}">
+        <div class="grupo-game-hdr" onclick="syncGrupo('${u.id}','${g.id}')">
+          <span class="g-ico${icoCls}">${icoSym}</span>
+          <span class="g-nombre">${g.nombre}</span>
+          <span class="g-stats">A${g.A} F${g.F} PA${g.FP} D${g.D}</span>
+          <span class="g-sync">⚡</span>
+        </div>
+        <div class="dots-wrap">${dots}</div>
+      </div>`;
+    });
+
+    cards += `<div class="u-card${esActiva ? ' activa' : ''}${totalV === 0 ? ' eliminada' : ''}">
+      <div class="u-card-hdr">
+        <span class="u-card-nombre">${u.lider ? '★ ' : ''}${u.nombre}</span>
+        <span class="u-sync-dot"></span>
+      </div>
+      ${gruposHtml}
+      <div class="u-card-footer">
+        <span class="u-contador"><strong>${totalV}</strong>/${totalM}</span>
+        <button class="u-reset" onclick="resetUnidad('${u.id}')">↺</button>
+      </div>
+    </div>`;
+  });
+
+  scr.innerHTML = banner + `<div class="game-grid">${cards}</div>`;
+}
+
+function toggleModelo(unitId, grupoId, mi) {
+  const ej    = ejercito();                                          if (!ej)    return;
+  const unit  = ej.unidades.find(u => u.id === unitId);            if (!unit)  return;
+  const grupo = unit.grupos.find(g => g.id === grupoId);           if (!grupo) return;
+  const m     = grupo.modelos[mi];                                  if (!m)     return;
+  m.vivo = !m.vivo;
+  saveArmies();
+  if (st.activa && st.activa.unitId === unitId && st.activa.grupoId === grupoId) {
+    syncLanzador(unit, grupo);
+  }
+  renderGame();
+}
+
+function syncGrupo(unitId, grupoId) {
+  const ej    = ejercito();                                    if (!ej)    return;
+  const unit  = ej.unidades.find(u => u.id === unitId);      if (!unit)  return;
+  const grupo = unit.grupos.find(g => g.id === grupoId);     if (!grupo) return;
+  syncLanzador(unit, grupo);
+  renderGame();
+}
+
+function resetUnidad(unitId) {
+  const ej   = ejercito();                                   if (!ej)   return;
+  const unit = ej.unidades.find(u => u.id === unitId);      if (!unit) return;
+  unit.grupos.forEach(g => g.modelos.forEach(m => m.vivo = true));
+  saveArmies();
+  if (st.activa && st.activa.unitId === unitId) {
+    const g = unit.grupos.find(g2 => g2.id === st.activa.grupoId);
+    if (g) syncLanzador(unit, g);
+  }
+  renderGame();
+}
+
+function reiniciarPartida() {
+  if (!confirm('¿Restaurar todas las miniaturas del ejército?')) return;
+  const ej = ejercito(); if (!ej) return;
+  ej.unidades.forEach(u => u.grupos.forEach(g => g.modelos.forEach(m => m.vivo = true)));
+  st.activa = null;
+  try { localStorage.removeItem(LS_SYNC); } catch(e) {}
+  saveArmies(); saveSt(); renderGame();
+}
+
+// ── NAVEGACIÓN ───────────────────────────────────────────────
+function irHome() {
+  nuevoArmyForm = false;
+  st = { screen: 'home', ejId: null, activa: null, editId: null };
+  editUnit = null; saveSt(); render();
+}
+
+function irEjercito(id) {
+  nuevoArmyForm = false;
+  st.ejId   = id;
+  st.screen = 'army';
+  st.editId = null;
+  editUnit  = null;
+  saveSt(); render();
+}
+
+function irArmy() {
+  st.screen = 'army'; st.editId = null; editUnit = null;
+  saveSt(); render();
+}
+
+function irGame() {
+  const ej = ejercito();
+  if (!ej || !ej.unidades.length) { alert('Añade unidades primero'); return; }
+  st.screen = 'game'; saveSt(); render();
+}
+
+// ── MAIN ─────────────────────────────────────────────────────
+function render() {
+  renderHeader();
+  const s = st.screen;
+  if      (s === 'home')        renderHome();
+  else if (s === 'army')        renderArmy();
+  else if (s === 'unit-editor') renderUnitEditor();
+  else if (s === 'game')        renderGame();
+}
+
+window.onload = () => { initData(); render(); };
+</script>
+</body>
+</html>
