@@ -1081,8 +1081,13 @@ function cargarPerfilAtacante() {
 
   // Perfil del rastreador — solo rellena stats del arma
   if (id.startsWith('rastr:')) {
-    const grupoId = id.slice(6);
-    const p = getRastreadorPerfiles().find(x => x.grupoId === grupoId);
+    const parts    = id.slice(6).split(':');
+    const grupoId  = parts[0];
+    const perfilId = parts[1] || null;
+    const todos    = getRastreadorPerfiles();
+    const p = perfilId
+      ? todos.find(x => x.grupoId === grupoId && x.perfilId === perfilId)
+      : todos.find(x => x.grupoId === grupoId);
     if (!p) return;
     document.getElementById('atk-tipo').value = p.tipo || 'dist';
     document.getElementById('atk-hab').value  = String(p.hab || 3);
@@ -1135,12 +1140,23 @@ function getRastreadorPerfiles() {
     Object.values(armies).forEach(army => {
       (army.unidades || []).forEach(unit => {
         (unit.grupos || []).forEach(grupo => {
-          result.push({
-            grupoId: grupo.id,
-            label: `${unit.nombre} — ${grupo.nombre}`,
-            tipo: grupo.tipo, hab: grupo.hab,
-            A: grupo.A, F: grupo.F, FP: grupo.FP, D: grupo.D
-          });
+          if (grupo.perfiles && grupo.perfiles.length > 0) {
+            grupo.perfiles.forEach(p => {
+              result.push({
+                grupoId: grupo.id, perfilId: p.id,
+                label: `${p.nombre || '—'} — ${unit.nombre} (${grupo.nombre})`,
+                tipo: grupo.tipo, hab: grupo.hab,
+                A: p.A, F: p.F, FP: p.FP, D: p.D
+              });
+            });
+          } else {
+            result.push({
+              grupoId: grupo.id, perfilId: null,
+              label: `${unit.nombre} — ${grupo.nombre}`,
+              tipo: grupo.tipo, hab: grupo.hab,
+              A: grupo.A, F: grupo.F, FP: grupo.FP, D: grupo.D
+            });
+          }
         });
       });
     });
@@ -1172,7 +1188,7 @@ function refrescarDropdownPerfilesAtk() {
     grp.label = '⚔ Del rastreador';
     rastr.forEach(p => {
       const o = document.createElement('option');
-      o.value = 'rastr:' + p.grupoId; o.textContent = p.label; grp.appendChild(o);
+      o.value = p.perfilId ? `rastr:${p.grupoId}:${p.perfilId}` : `rastr:${p.grupoId}`; o.textContent = p.label; grp.appendChild(o);
     });
     sel.appendChild(grp);
   }

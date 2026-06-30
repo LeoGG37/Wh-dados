@@ -93,6 +93,11 @@ body {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 14px; margin-bottom: 8px;
 }
+.army-export {
+  background: none; border: 1px solid rgba(37,99,235,0.3); color: var(--accent2);
+  border-radius: 6px; padding: 5px 10px; font-size: 0.7rem;
+  cursor: pointer; touch-action: manipulation; flex-shrink: 0; min-height: 32px;
+}
 
 /* ── ARMY (lista unidades) ──────────────────── */
 .unit-row {
@@ -186,7 +191,9 @@ body {
   padding: 7px 9px; background: var(--surface2); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 5px;
 }
-.u-card-nombre { flex: 1; font-size: 0.78rem; font-weight: 500; color: var(--text); }
+.u-card-hdr-info { flex: 1; min-width: 0; }
+.u-card-nombre { font-size: 0.78rem; font-weight: 500; color: var(--text); }
+.u-card-def { font-size: 0.72rem; color: var(--muted); margin-left: auto; flex-shrink: 0; text-align: right; }
 .u-sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; flex-shrink: 0; }
 .u-card.activa .u-sync-dot { display: inline-block; }
 
@@ -201,9 +208,31 @@ body {
 }
 .g-ico.cc { background: rgba(245,96,96,0.1); border-color: rgba(245,96,96,0.25); color: #f07070; }
 .g-nombre { font-size: 0.62rem; color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.g-stats  { font-size: 0.58rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.g-stats  { font-size: 0.72rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
 .g-sync   { font-size: 0.6rem; color: var(--success); display: none; flex-shrink: 0; }
 .u-card.activa .grupo-game.synced .g-sync { display: inline; }
+
+.grupo-game-hdr-multi { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.prof-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
+.prof-row {
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px;
+  border-radius: 5px; background: var(--bg); border: 1px solid transparent;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.prof-row.synced { border-color: rgba(37,99,235,0.4); background: rgba(37,99,235,0.08); }
+.prof-nombre { font-size: 0.62rem; color: var(--muted); flex: 1; }
+.prof-row.synced .prof-nombre { color: var(--accent2); }
+.prof-stats  { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+.prof-row.synced .prof-stats { color: var(--text); }
+.prof-sync   { font-size: 0.6rem; color: var(--success); display: none; flex-shrink: 0; }
+.prof-row.synced .prof-sync { display: inline; }
+
+.perfiles-sec { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+.perfiles-sec-lbl { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.perfil-editor { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px; margin-bottom: 5px; }
+.perfil-editor-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.perfil-nombre-in { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 4px 8px; font-size: 0.78rem; min-height: 30px; }
+.perfil-del { background: none; border: 1px solid rgba(245,96,96,0.3); color: var(--fail); border-radius: 5px; padding: 3px 8px; font-size: 0.65rem; cursor: pointer; touch-action: manipulation; flex-shrink: 0; }
 
 .dots-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
 .mdot {
@@ -237,11 +266,20 @@ const LS_SYNC   = 'w40k_sync';
 // ── HELPERS ─────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
-// Crea un grupo con modelos
+// Crea un grupo con modelos (perfil único)
 function mkGrupo(nombre, tipo, hab, A, F, FP, D, cnt) {
   return {
     id: uid(), nombre, tipo, hab,
     A: String(A), F, FP, D: String(D),
+    modelos: Array.from({ length: cnt }, () => ({ id: uid(), vivo: true }))
+  };
+}
+
+// Crea un grupo con múltiples perfiles de ataque
+function mkGrupoPerfiles(nombre, tipo, hab, perfiles, cnt) {
+  return {
+    id: uid(), nombre, tipo, hab,
+    perfiles: perfiles.map(p => ({ id: uid(), nombre: p.nombre, A: String(p.A), F: p.F, FP: p.FP, D: String(p.D) })),
     modelos: Array.from({ length: cnt }, () => ({ id: uid(), vivo: true }))
   };
 }
@@ -272,8 +310,10 @@ function crearEjAeldari() {
         g('Láser multitubo',  'dist', 3, '6', 5, 0,  '1', 1),
       ]),
       mk('Filos Espectrales', false, 4, 3, 0, [
-        g('Lanza — impacto', 'cc', 3, '3', 6, -2, '2', 4),
-        g('Lanza — barrido', 'cc', 3, '6', 4, -1, '1', 1),
+        mkGrupoPerfiles('Lanza de banshee', 'cc', 3, [
+          { nombre: 'Impacto', A: '3', F: 6, FP: -2, D: '2' },
+          { nombre: 'Barrido', A: '6', F: 4, FP: -1, D: '1' },
+        ], 5),
       ]),
     ]
   };
@@ -304,17 +344,19 @@ function saveSt()     { try { localStorage.setItem(LS_STATE,  JSON.stringify(st)
 function ejercito()   { return armies[st.ejId]; }
 
 // ── SYNC AL LANZADOR ────────────────────────────────────────
-function syncLanzador(unit, grupo) {
-  const vivos = grupo.modelos.filter(m => m.vivo).length;
+function syncLanzador(unit, grupo, perfil = null) {
+  const vivos  = grupo.modelos.filter(m => m.vivo).length;
+  const stats  = perfil || grupo;
+  const nombre = perfil ? `${grupo.nombre} — ${perfil.nombre}` : grupo.nombre;
   try {
     localStorage.setItem(LS_SYNC, JSON.stringify({
-      nombre: unit.nombre, perfil: grupo.nombre,
+      nombre: unit.nombre, perfil: nombre,
       tipo: grupo.tipo, hab: grupo.hab,
-      A: grupo.A, F: grupo.F, FP: grupo.FP, D: grupo.D,
+      A: stats.A, F: stats.F, FP: stats.FP, D: stats.D,
       modelos: vivos
     }));
   } catch(e) {}
-  st.activa = { unitId: unit.id, grupoId: grupo.id };
+  st.activa = { unitId: unit.id, grupoId: grupo.id, perfilId: perfil ? perfil.id : null };
   saveSt();
 }
 
@@ -355,12 +397,15 @@ function renderHome() {
         <div class="army-card-nombre">${a.nombre}</div>
         <div class="army-card-sub">${a.faccion} &middot; ${nU} unidad${nU!==1?'es':''} &middot; ${nM} miniatura${nM!==1?'s':''}</div>
       </div>
+      <button class="army-export" onclick="event.stopPropagation();exportarEjercito('${a.id}')" title="Exportar">📤</button>
       <button class="army-del" onclick="event.stopPropagation();eliminarEjercito('${a.id}')">✕</button>
     </div>`;
   });
 
   if (!nuevoArmyForm) {
-    h += `<button class="btn-full dashed" style="margin-top:6px" onclick="toggleNuevoArmy()">+ Nuevo ejército</button>`;
+    h += `<button class="btn-full dashed" style="margin-top:6px" onclick="toggleNuevoArmy()">+ Nuevo ejército</button>
+    <button class="btn-full ghost" style="margin-top:6px" onclick="document.getElementById('import-input').click()">📥 Importar ejército</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importarEjercito(this)">`;
   } else {
     h += `<div class="nuevo-form">
       <div class="form-campo">
@@ -382,6 +427,48 @@ function renderHome() {
 }
 
 function toggleNuevoArmy() { nuevoArmyForm = !nuevoArmyForm; renderHome(); }
+
+function exportarEjercito(id) {
+  const a = armies[id];
+  if (!a) return;
+  const json = JSON.stringify(a, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const el   = document.createElement('a');
+  el.href    = url;
+  el.download = a.nombre.replace(/[^\w\s\-áéíóúñÁÉÍÓÚÑ]/g, '').trim() + '.json';
+  document.body.appendChild(el);
+  el.click();
+  document.body.removeChild(el);
+  URL.revokeObjectURL(url);
+}
+
+function importarEjercito(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const a = JSON.parse(e.target.result);
+      if (!a.nombre || !Array.isArray(a.unidades)) { alert('Archivo no válido'); return; }
+      // Reasignar IDs para evitar conflictos y resetear modelos a vivos
+      a.id = uid();
+      a.unidades = a.unidades.map(u => ({
+        ...u, id: uid(),
+        grupos: (u.grupos || []).map(g => ({
+          ...g, id: uid(),
+          modelos: (g.modelos || []).map(() => ({ id: uid(), vivo: true }))
+        }))
+      }));
+      armies[a.id] = a;
+      saveArmies();
+      nuevoArmyForm = false;
+      render();
+    } catch(err) { alert('No se pudo leer el archivo. Asegúrate de que es un JSON exportado desde esta app.'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
 
 function crearEjercito() {
   const nombre  = (document.getElementById('inp-a-nombre')?.value || '').trim();
@@ -441,7 +528,7 @@ function nuevaUnidad() {
   st.editId = null;
   editUnit  = {
     nombre: '', lider: false, R: 3, S: 5, inv: 0,
-    grupos: [{ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1 }]
+    grupos: [{ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1, perfiles: [] }]
   };
   st.screen = 'unit-editor'; saveSt(); render();
 }
@@ -457,7 +544,8 @@ function editarUnidad(unitId) {
     R: unit.R || 3, S: unit.S || 5, inv: unit.inv || 0,
     grupos: unit.grupos.map(g => ({
       id: g.id, nombre: g.nombre, tipo: g.tipo, hab: g.hab,
-      A: g.A, F: g.F, FP: g.FP, D: g.D, cantidad: g.modelos.length
+      A: g.A, F: g.F, FP: g.FP, D: g.D, cantidad: g.modelos.length,
+      perfiles: (g.perfiles || []).map(p => ({ ...p }))
     }))
   };
   st.screen = 'unit-editor'; saveSt(); render();
@@ -541,6 +629,32 @@ function renderUnitEditor() {
 
 function grupoEditorHtml(g, gi) {
   const canDel = editUnit.grupos.length > 1;
+  const hasPerfiles = g.perfiles && g.perfiles.length > 0;
+
+  const statsGrid = hasPerfiles ? '' : `
+    <div class="stats-grid">
+      <div class="sc">
+        <input class="sv" type="text" placeholder="A" value="${g.A||''}" oninput="updGrupo(${gi},'A',this.value)">
+        <span class="sl">Ataques</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="number" min="1" max="20" value="${g.F||4}" oninput="updGrupo(${gi},'F',+this.value||4)">
+        <span class="sl">Fuerza</span>
+      </div>
+      <div class="sc">
+        <select class="sv" onchange="updGrupo(${gi},'FP',+this.value)">
+          ${[0,-1,-2,-3,-4,-5,-6].map(v=>`<option value="${v}" ${(g.FP||0)===v?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <span class="sl">PA</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="text" placeholder="D" value="${g.D||''}" oninput="updGrupo(${gi},'D',this.value)">
+        <span class="sl">Daño</span>
+      </div>
+    </div>`;
+
+  const perfilesItems = (g.perfiles || []).map((p, pi) => perfilEditorHtml(gi, pi, p)).join('');
+
   return `<div class="grupo-editor">
     <div class="grupo-editor-hdr">
       <span class="grupo-num">Grupo ${gi + 1}</span>
@@ -551,11 +665,11 @@ function grupoEditorHtml(g, gi) {
       <input class="form-input" placeholder="Ej. Bólter, Lanzallamas" value="${g.nombre}"
         oninput="updGrupo(${gi},'nombre',this.value)">
     </div>
-    <div class="stats-grid">
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">
       <div class="sc">
         <select class="sv" onchange="updGrupo(${gi},'tipo',this.value)">
-          <option value="dist" ${g.tipo==='dist'?'selected':''}>🏹</option>
-          <option value="cc"   ${g.tipo==='cc'  ?'selected':''}>⚔️</option>
+          <option value="dist" ${g.tipo==='dist'?'selected':''}>🏹 Disparo</option>
+          <option value="cc"   ${g.tipo==='cc'  ?'selected':''}>⚔️ Cuerpo a cuerpo</option>
         </select>
         <span class="sl">Tipo</span>
       </div>
@@ -565,26 +679,14 @@ function grupoEditorHtml(g, gi) {
         </select>
         <span class="sl">HP/HA</span>
       </div>
-      <div class="sc">
-        <input class="sv" type="text" placeholder="A" value="${g.A}" oninput="updGrupo(${gi},'A',this.value)">
-        <span class="sl">Ataques</span>
-      </div>
-      <div class="sc">
-        <input class="sv" type="number" min="1" max="20" value="${g.F}" oninput="updGrupo(${gi},'F',+this.value||4)">
-        <span class="sl">Fuerza</span>
-      </div>
-      <div class="sc">
-        <select class="sv" onchange="updGrupo(${gi},'FP',+this.value)">
-          ${[0,-1,-2,-3,-4,-5,-6].map(v=>`<option value="${v}" ${g.FP===v?'selected':''}>${v}</option>`).join('')}
-        </select>
-        <span class="sl">PA</span>
-      </div>
-      <div class="sc">
-        <input class="sv" type="text" placeholder="D" value="${g.D}" oninput="updGrupo(${gi},'D',this.value)">
-        <span class="sl">Daño</span>
-      </div>
     </div>
-    <div class="cantidad-row">
+    ${statsGrid}
+    <div class="perfiles-sec">
+      <div class="perfiles-sec-lbl">Perfiles de ataque${hasPerfiles ? '' : ' (opcional — para armas con varios modos)'}</div>
+      ${perfilesItems}
+      <button class="btn-full ghost" style="font-size:0.72rem;padding:7px" onclick="addPerfil(${gi})">+ Añadir perfil</button>
+    </div>
+    <div class="cantidad-row" style="margin-top:8px">
       <span class="cantidad-lbl">Miniaturas con esta arma</span>
       <input class="cantidad-in" type="number" min="0" max="200" value="${g.cantidad}"
         oninput="updGrupo(${gi},'cantidad',+this.value||0);actualizarTotal()">
@@ -592,8 +694,64 @@ function grupoEditorHtml(g, gi) {
   </div>`;
 }
 
+function perfilEditorHtml(gi, pi, p) {
+  return `<div class="perfil-editor">
+    <div class="perfil-editor-hdr">
+      <input class="perfil-nombre-in" type="text" placeholder="Nombre (ej. Impacto)" value="${p.nombre||''}"
+        oninput="updPerfil(${gi},${pi},'nombre',this.value)">
+      <button class="perfil-del" onclick="delPerfil(${gi},${pi})">✕</button>
+    </div>
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="sc">
+        <input class="sv" type="text" placeholder="A" value="${p.A||''}" oninput="updPerfil(${gi},${pi},'A',this.value)">
+        <span class="sl">Ataques</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="number" min="1" max="20" value="${p.F||4}" oninput="updPerfil(${gi},${pi},'F',+this.value||4)">
+        <span class="sl">Fuerza</span>
+      </div>
+      <div class="sc">
+        <select class="sv" onchange="updPerfil(${gi},${pi},'FP',+this.value)">
+          ${[0,-1,-2,-3,-4,-5,-6].map(v=>`<option value="${v}" ${(p.FP||0)===v?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <span class="sl">PA</span>
+      </div>
+      <div class="sc">
+        <input class="sv" type="text" placeholder="D" value="${p.D||''}" oninput="updPerfil(${gi},${pi},'D',this.value)">
+        <span class="sl">Daño</span>
+      </div>
+    </div>
+  </div>`;
+}
+
 function updGrupo(gi, campo, valor) {
   if (editUnit && editUnit.grupos[gi] !== undefined) editUnit.grupos[gi][campo] = valor;
+}
+
+function updPerfil(gi, pi, campo, valor) {
+  const g = editUnit && editUnit.grupos[gi];
+  if (g && g.perfiles && g.perfiles[pi] !== undefined) g.perfiles[pi][campo] = valor;
+}
+
+function addPerfil(gi) {
+  syncFormMemoria();
+  const g = editUnit.grupos[gi];
+  if (!g.perfiles) g.perfiles = [];
+  const first = g.perfiles.length === 0;
+  g.perfiles.push({
+    id: uid(), nombre: '',
+    A: first ? (g.A || '2') : '2',
+    F: first ? (g.F || 4)  : 4,
+    FP: first ? (g.FP || 0) : 0,
+    D: first ? (g.D || '1') : '1'
+  });
+  renderUnitEditor();
+}
+
+function delPerfil(gi, pi) {
+  syncFormMemoria();
+  editUnit.grupos[gi].perfiles.splice(pi, 1);
+  renderUnitEditor();
 }
 
 function actualizarTotal() {
@@ -619,7 +777,7 @@ function syncFormMemoria() {
 
 function addGrupo() {
   syncFormMemoria();
-  editUnit.grupos.push({ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1 });
+  editUnit.grupos.push({ id: uid(), nombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', cantidad: 1, perfiles: [] });
   renderUnitEditor();
 }
 
@@ -651,10 +809,15 @@ function guardarUnidad() {
     } else {
       modelos = Array.from({ length: cnt }, () => ({ id: uid(), vivo: true }));
     }
-    return {
-      id: eg.id, nombre: eg.nombre || 'Arma', tipo: eg.tipo, hab: eg.hab,
-      A: String(eg.A || 1), F: eg.F || 4, FP: eg.FP || 0, D: String(eg.D || 1), modelos
-    };
+    const hasPerfiles = eg.perfiles && eg.perfiles.length > 0;
+    const base = { id: eg.id, nombre: eg.nombre || 'Arma', tipo: eg.tipo, hab: eg.hab, modelos };
+    if (hasPerfiles) {
+      return { ...base, perfiles: eg.perfiles.map(p => ({
+        id: p.id || uid(), nombre: p.nombre || 'Perfil',
+        A: String(p.A || 1), F: p.F || 4, FP: p.FP || 0, D: String(p.D || 1)
+      })) };
+    }
+    return { ...base, A: String(eg.A || 1), F: eg.F || 4, FP: eg.FP || 0, D: String(eg.D || 1) };
   });
 
   const unit = {
@@ -686,9 +849,11 @@ function renderGame() {
   if (st.activa) {
     const unit  = ej.unidades.find(u => u.id === st.activa.unitId);
     const grupo = unit && unit.grupos.find(g => g.id === st.activa.grupoId);
+    const perfil = grupo && st.activa.perfilId ? (grupo.perfiles || []).find(p => p.id === st.activa.perfilId) : null;
     if (unit && grupo) {
-      const vivos = grupo.modelos.filter(m => m.vivo).length;
-      banner = `<div class="sync-banner">⚡ <strong>${unit.nombre}</strong> — ${grupo.nombre} &middot; ${vivos} modelo${vivos!==1?'s':''}</div>`;
+      const vivos     = grupo.modelos.filter(m => m.vivo).length;
+      const perfilStr = perfil ? ` — ${perfil.nombre}` : '';
+      banner = `<div class="sync-banner">⚡ <strong>${unit.nombre}</strong> — ${grupo.nombre}${perfilStr} &middot; ${vivos} modelo${vivos!==1?'s':''}</div>`;
     }
   }
 
@@ -700,29 +865,52 @@ function renderGame() {
 
     let gruposHtml = '';
     u.grupos.forEach(g => {
-      const esSync = esActiva && st.activa.grupoId === g.id;
-      const icoCls = g.tipo === 'dist' ? '' : ' cc';
-      const icoSym = g.tipo === 'dist' ? '🏹' : '⚔️';
-      const dots   = g.modelos.map((m, mi) => {
+      const esSync     = esActiva && st.activa.grupoId === g.id;
+      const icoCls     = g.tipo === 'dist' ? '' : ' cc';
+      const icoSym     = g.tipo === 'dist' ? '🏹' : '⚔️';
+      const hasPerfiles = g.perfiles && g.perfiles.length > 0;
+      const dots = g.modelos.map((m, mi) => {
         const cls = (!m.vivo ? ' muerto' : '') + (u.lider ? ' lider' : '');
         const sym = !m.vivo ? '✕' : (u.lider ? '★' : '');
         return `<div class="mdot${cls}" onclick="toggleModelo('${u.id}','${g.id}',${mi})">${sym}</div>`;
       }).join('');
 
-      gruposHtml += `<div class="grupo-game${esSync ? ' synced' : ''}">
-        <div class="grupo-game-hdr" onclick="syncGrupo('${u.id}','${g.id}')">
-          <span class="g-ico${icoCls}">${icoSym}</span>
-          <span class="g-nombre">${g.nombre}</span>
-          <span class="g-stats">A${g.A} F${g.F} PA${g.FP} D${g.D}</span>
-          <span class="g-sync">⚡</span>
-        </div>
-        <div class="dots-wrap">${dots}</div>
-      </div>`;
+      if (hasPerfiles) {
+        const perfilesHtml = g.perfiles.map(p => {
+          const isProfSync = esSync && st.activa.perfilId === p.id;
+          return `<div class="prof-row${isProfSync ? ' synced' : ''}" onclick="syncPerfil('${u.id}','${g.id}','${p.id}')">
+            <span class="prof-nombre">${p.nombre || '—'}</span>
+            <span class="prof-stats">A${p.A} F${p.F} PA${p.FP} D${p.D}</span>
+            <span class="prof-sync">⚡</span>
+          </div>`;
+        }).join('');
+        gruposHtml += `<div class="grupo-game${esSync ? ' synced' : ''}">
+          <div class="grupo-game-hdr-multi">
+            <span class="g-ico${icoCls}">${icoSym}</span>
+            <span class="g-nombre">${g.nombre} · ${g.hab}+</span>
+            <div class="dots-wrap" style="margin-left:auto;flex-wrap:wrap;gap:4px">${dots}</div>
+          </div>
+          <div class="prof-list">${perfilesHtml}</div>
+        </div>`;
+      } else {
+        gruposHtml += `<div class="grupo-game${esSync ? ' synced' : ''}">
+          <div class="grupo-game-hdr" onclick="syncGrupo('${u.id}','${g.id}')">
+            <span class="g-ico${icoCls}">${icoSym}</span>
+            <span class="g-nombre">${g.nombre}</span>
+            <span class="g-stats">A${g.A} F${g.F} PA${g.FP} D${g.D}</span>
+            <span class="g-sync">⚡</span>
+          </div>
+          <div class="dots-wrap">${dots}</div>
+        </div>`;
+      }
     });
 
     cards += `<div class="u-card${esActiva ? ' activa' : ''}${totalV === 0 ? ' eliminada' : ''}">
       <div class="u-card-hdr">
-        <span class="u-card-nombre">${u.lider ? '★ ' : ''}${u.nombre}</span>
+        <div class="u-card-hdr-info">
+          <div class="u-card-nombre">${u.lider ? '★ ' : ''}${u.nombre}</div>
+        </div>
+        ${u.R ? `<div class="u-card-def">R${u.R} · S${u.S}+${u.inv ? ` · Inv${u.inv}+` : ''}</div>` : ''}
         <span class="u-sync-dot"></span>
       </div>
       ${gruposHtml}
@@ -744,7 +932,8 @@ function toggleModelo(unitId, grupoId, mi) {
   m.vivo = !m.vivo;
   saveArmies();
   if (st.activa && st.activa.unitId === unitId && st.activa.grupoId === grupoId) {
-    syncLanzador(unit, grupo);
+    const perfil = st.activa.perfilId ? (grupo.perfiles || []).find(p => p.id === st.activa.perfilId) : null;
+    syncLanzador(unit, grupo, perfil || null);
   }
   renderGame();
 }
@@ -757,6 +946,15 @@ function syncGrupo(unitId, grupoId) {
   renderGame();
 }
 
+function syncPerfil(unitId, grupoId, perfilId) {
+  const ej    = ejercito();                                              if (!ej)    return;
+  const unit  = ej.unidades.find(u => u.id === unitId);                if (!unit)  return;
+  const grupo = unit.grupos.find(g => g.id === grupoId);               if (!grupo) return;
+  const perfil = (grupo.perfiles || []).find(p => p.id === perfilId);  if (!perfil) return;
+  syncLanzador(unit, grupo, perfil);
+  renderGame();
+}
+
 function resetUnidad(unitId) {
   const ej   = ejercito();                                   if (!ej)   return;
   const unit = ej.unidades.find(u => u.id === unitId);      if (!unit) return;
@@ -764,7 +962,10 @@ function resetUnidad(unitId) {
   saveArmies();
   if (st.activa && st.activa.unitId === unitId) {
     const g = unit.grupos.find(g2 => g2.id === st.activa.grupoId);
-    if (g) syncLanzador(unit, g);
+    if (g) {
+      const perfil = st.activa.perfilId ? (g.perfiles || []).find(p => p.id === st.activa.perfilId) : null;
+      syncLanzador(unit, g, perfil || null);
+    }
   }
   renderGame();
 }
