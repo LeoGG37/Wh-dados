@@ -1,0 +1,3683 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lanzador v6">
+<meta name="theme-color" content="#1a2236">
+<title>Lanzador v6 — W40k</title>
+<style>
+:root {
+  --bg: #1a2236; --surface: #212d42; --surface2: #263248;
+  --accent: #2563eb; --accent2: #6baaf5;
+  --text: #e8edf5; --muted: #8494ae;
+  --success: #22c47a; --fail: #f56060; --warn: #e8a030;
+  --border: #2d3a52; --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  display: flex; flex-direction: column;
+  height: 100vh; height: 100dvh; overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ── CABECERA ───────────────────────────────── */
+.hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 13px; border-bottom: 3px solid var(--accent);
+  flex-shrink: 0; background: var(--surface);
+}
+.hdr-t {
+  flex: 1; color: var(--accent2); font-size: 0.7rem;
+  letter-spacing: 2.5px; text-transform: uppercase;
+}
+.hdr-b {
+  background: none; border: none; color: var(--muted);
+  font-size: 1.05rem; cursor: pointer; touch-action: manipulation;
+  padding: 4px 6px; line-height: 1;
+}
+
+/* ── CAJÓN LATERAL ──────────────────────────── */
+/* Se abre desde la DERECHA, que es donde está el botón ☰: saliendo por la
+   izquierda el panel iba al revés del gesto (cambiado el 04/11/2026).
+   Dentro van los ejércitos y los sitios a los que ir. Las tiradas ya no:
+   tienen su propia pantalla. */
+.cajon-ov {
+  display: none; position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0,0,0,0.55); z-index: 120;
+}
+.cajon-ov.open { display: block; }
+.cajon {
+  position: absolute; top: 0; bottom: 0; right: 0;
+  width: 86%; max-width: 360px;
+  background: var(--surface); border-left: 1px solid var(--border);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 0 calc(16px + env(safe-area-inset-bottom));
+  padding-top: calc(12px + env(safe-area-inset-top));
+}
+.cj-sec {
+  font-size: 0.58rem; color: var(--muted); letter-spacing: 1.2px;
+  text-transform: uppercase; padding: 0 15px 7px;
+}
+.cj-it {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 15px; font-size: 0.86rem;
+  cursor: pointer; touch-action: manipulation;
+}
+.cj-it:active { background: var(--surface2); }
+/* La marca de «estás aquí» va al borde derecho: es el lado por el que se
+   abre el cajón y el que queda pegado a la pantalla */
+.cj-it.on {
+  background: rgba(37,99,235,0.13);
+  border-right: 3px solid var(--accent); padding-right: 12px;
+}
+.cj-ico { width: 20px; text-align: center; color: var(--accent2); flex-shrink: 0; }
+.cj-n { flex: 1; }
+.cj-cnt {
+  font-size: 0.66rem; color: var(--muted); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 9px; padding: 1px 8px;
+}
+.cj-sep { border: none; border-top: 1px solid var(--border); margin: 9px 15px; }
+
+.cj-ej {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 11px; margin: 0 15px 5px;
+  cursor: pointer; touch-action: manipulation;
+}
+.cj-ej:active { background: var(--surface2); }
+.cj-ej.a { border-color: rgba(37,99,235,0.55); }
+.cj-ej.b { border-color: rgba(232,160,48,0.5); }
+.cj-ej-n { font-size: 0.8rem; display: flex; align-items: center; gap: 7px; }
+.cj-ej-s { font-size: 0.66rem; color: var(--muted); margin-top: 3px; }
+.cj-ej-fl { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+/* La etiqueta de bando es el botón que lo cambia, así que necesita área de
+   toque propia y tiene que parar el clic para no abrir el ejército */
+.cj-tag {
+  font-size: 0.6rem; border-radius: 4px; padding: 4px 8px; flex-shrink: 0;
+  cursor: pointer; touch-action: manipulation;
+  background: var(--surface2); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.cj-tag:active { opacity: 0.6; }
+.cj-tag.a { background: rgba(37,99,235,0.18); color: var(--accent2); border-color: rgba(37,99,235,0.45); }
+.cj-tag.b { background: rgba(232,160,48,0.16); color: var(--warn); border-color: rgba(232,160,48,0.4); }
+.cj-add {
+  font-size: 0.74rem; color: var(--accent2); padding: 7px 15px 2px;
+  cursor: pointer; touch-action: manipulation;
+}
+.cj-vacio { font-size: 0.72rem; color: var(--muted); padding: 2px 15px 8px; line-height: 1.5; }
+
+/* ── PANTALLA DE COPIA DE SEGURIDAD ──────────── */
+.cp-area {
+  width: 100%; min-height: 150px; resize: vertical;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); padding: 10px;
+  /* 16px obligatorio: por debajo, iOS hace zoom al enfocar */
+  font-size: 16px; font-family: ui-monospace, Menlo, Consolas, monospace;
+  line-height: 1.35; -webkit-overflow-scrolling: touch;
+}
+.cp-ok   { color: var(--success); font-size: 0.72rem; line-height: 1.5; }
+.cp-mal  { color: var(--fail);    font-size: 0.72rem; line-height: 1.5; }
+
+/* ── PANTALLA DE HISTORIAL ───────────────────── */
+/* Las tiradas vivían dentro del cajón y se sacaron a su propia pantalla el
+   04/11/2026: ahí caben las 40 que se guardan, con su fecha. */
+.h-it {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 12px; margin-bottom: 8px;
+}
+.h-t { display: flex; justify-content: space-between; align-items: baseline; gap: 9px; font-size: 0.82rem; }
+.h-n { color: var(--success); flex-shrink: 0; }
+.h-s { font-size: 0.68rem; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+.h-f { font-size: 0.62rem; color: var(--muted); margin-top: 5px; }
+
+/* ── ZONA CENTRAL ───────────────────────────── */
+.scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px; display: flex; flex-direction: column; gap: 9px;
+}
+.wrap { width: 100%; max-width: 540px; margin: 0 auto;
+        display: flex; flex-direction: column; gap: 9px; }
+
+.lbl {
+  font-size: 0.6rem; color: var(--muted);
+  letter-spacing: 1.2px; text-transform: uppercase;
+}
+
+/* ── BARRA DE BANDOS ────────────────────────── */
+.bandos {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 11px; padding: 8px 9px;
+}
+.bando {
+  flex: 1; min-width: 0; text-align: center;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 7px;
+  cursor: pointer; touch-action: manipulation;
+}
+.bando:active { background: var(--surface2); }
+.bando-l { font-size: 0.55rem; color: var(--muted); letter-spacing: 1.2px; text-transform: uppercase; }
+.bando-n {
+  font-size: 0.8rem; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bando.atacante { border-color: rgba(37,99,235,0.5); }
+.bando.atacante .bando-n { color: var(--accent2); }
+.swap {
+  flex-shrink: 0; width: 44px; height: 44px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 9px; color: var(--text); font-size: 1.1rem;
+  cursor: pointer; touch-action: manipulation;
+}
+.swap:active { background: var(--accent); }
+
+/* ── TARJETAS DE PERFIL ─────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 11px; padding: 10px 11px;
+}
+
+.pick {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 11px; margin-bottom: 6px;
+  cursor: pointer; touch-action: manipulation;
+  min-height: 44px;
+}
+.pick:active { background: var(--surface2); }
+.pick.fija { cursor: default; }
+.pick.fija:active { background: var(--bg); }
+.pick-l { font-size: 0.6rem; color: var(--muted); letter-spacing: 1.2px;
+          text-transform: uppercase; flex-shrink: 0; width: 62px; }
+.pick-v { flex: 1; min-width: 0; font-size: 0.84rem;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-v.vacio { color: var(--muted); }
+.pick-c { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+
+.pick-step { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.psb {
+  width: 38px; height: 34px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 1.05rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; touch-action: manipulation;
+}
+.psb:active { background: var(--accent); }
+.psn { min-width: 30px; text-align: center; font-size: 1.05rem; }
+
+.stats-g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 3px; }
+.st {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 3px; text-align: center;
+}
+.st.hl { border-color: rgba(232,160,48,0.5); }
+.st-v { font-size: 1.15rem; line-height: 1; }
+.st.hl .st-v { color: var(--warn); }
+.st-l { font-size: 0.6rem; color: var(--muted); margin-top: 3px; }
+.card-pie { font-size: 0.66rem; color: var(--muted); margin-top: 7px; line-height: 1.5; }
+
+.ajst {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted); padding: 9px 11px; margin-top: 7px;
+  font-size: 0.74rem; font-family: inherit;
+  cursor: pointer; touch-action: manipulation; min-height: 38px;
+}
+.ajst:active { background: var(--surface2); }
+.ajst.hay { border-color: rgba(37,99,235,0.45); color: var(--accent2); }
+.ajst-t { flex: 1; text-align: left; }
+.ajst-n {
+  background: rgba(37,99,235,0.16); border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 5px; padding: 1px 7px; font-size: 0.66rem; color: var(--accent2);
+}
+
+.chip-p {
+  background: rgba(37,99,235,0.16); border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 5px; padding: 2px 7px; font-size: 0.66rem;
+  color: var(--accent2); flex-shrink: 0;
+}
+.vs { text-align: center; font-size: 0.62rem; color: var(--muted); letter-spacing: 2px; }
+
+/* ── LISTAS DE SELECCIÓN ────────────────────── */
+.grp-t {
+  font-size: 0.6rem; color: var(--muted); letter-spacing: 1.2px;
+  text-transform: uppercase; margin: 13px 0 6px;
+}
+.grp-t:first-child { margin-top: 0; }
+.grp-t.act { color: var(--accent2); }
+.uitem {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 11px; margin-bottom: 5px;
+  cursor: pointer; touch-action: manipulation; min-height: 46px;
+}
+.uitem:active { background: var(--surface2); }
+.uitem.on { border-color: var(--accent); background: rgba(37,99,235,0.1); }
+.uitem.muerta { opacity: 0.45; }
+.uitem-txt { flex: 1; min-width: 0; }
+.uitem-n { font-size: 0.84rem; }
+.uitem-s { font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
+.uitem-tag {
+  font-size: 0.62rem; color: var(--muted); flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px;
+}
+.uitem-tag.dist { color: var(--accent2); border-color: rgba(107,170,245,0.4); }
+.uitem-tag.cc   { color: var(--warn);   border-color: rgba(232,160,48,0.4); }
+
+/* ── PANTALLA DE PARTIDA ────────────────────── */
+.pt-h { font-size: 0.95rem; margin-bottom: 4px; }
+.pt-s { font-size: 0.74rem; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+.ejcard {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 12px; margin-bottom: 6px;
+  cursor: pointer; touch-action: manipulation; min-height: 52px;
+}
+.ejcard:active { background: var(--surface2); }
+.ejcard.a { border-color: rgba(37,99,235,0.6); }
+.ejcard.b { border-color: rgba(232,160,48,0.5); }
+.ejcard-txt { flex: 1; min-width: 0; }
+.ejcard-n { font-size: 0.88rem; }
+.ejcard-s { font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
+.ejcard-rol {
+  font-size: 0.62rem; flex-shrink: 0; border-radius: 5px; padding: 3px 8px;
+  border: 1px solid var(--border); color: var(--muted);
+}
+.ejcard.a .ejcard-rol { color: var(--accent2); border-color: rgba(37,99,235,0.5); }
+.ejcard.b .ejcard-rol { color: var(--warn); border-color: rgba(232,160,48,0.5); }
+
+/* ── PANTALLA DE UN EJÉRCITO ────────────────── */
+/* Lista de unidades que se despliegan en el sitio con su ficha. */
+.ej-cab {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 13px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.ej-cab.a { border-color: rgba(37,99,235,0.5); }
+.ej-cab.b { border-color: rgba(232,160,48,0.45); }
+.ej-cab-n { font-size: 0.95rem; }
+.ej-cab-s { font-size: 0.68rem; color: var(--muted); margin-top: 3px; }
+
+.uni { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 7px; overflow: hidden; }
+.uni.open { border-color: rgba(37,99,235,0.5); }
+.uni-top {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  cursor: pointer; touch-action: manipulation;
+}
+.uni-top:active { background: var(--surface2); }
+.uni-n { flex: 1; font-size: 0.85rem; }
+.uni-x { font-size: 0.78rem; color: var(--muted); }
+.uni-ch { font-size: 0.62rem; color: var(--muted); }
+.uni-sub { font-size: 0.68rem; color: var(--muted); padding: 0 12px 10px; margin-top: -5px; }
+
+.uni-det { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 9px; }
+.uni-perf { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 4px; }
+.up { text-align: center; }
+.up-l { font-size: 0.56rem; color: var(--muted); margin-bottom: 3px; letter-spacing: 0.5px; }
+.up-v {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 7px 1px; font-size: 0.82rem;
+}
+.uni-lbl { font-size: 0.58rem; color: var(--accent2); letter-spacing: 1.2px; text-transform: uppercase; }
+.uni-arma {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 8px 10px;
+  cursor: pointer; touch-action: manipulation;
+}
+.uni-arma:active { border-color: var(--accent); }
+.uni-arma-t { flex: 1; min-width: 0; }
+.uni-arma-n { font-size: 0.76rem; }
+.uni-arma-s { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+.uni-lap { font-size: 0.82rem; color: var(--muted); flex-shrink: 0; }
+.uni-btns { display: flex; gap: 6px; }
+.uni-bt {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text); padding: 9px; font-size: 0.72rem;
+  text-align: center; cursor: pointer; touch-action: manipulation;
+}
+.uni-bt.del { background: none; border-color: rgba(245,96,96,0.3); color: var(--fail); }
+.uni-add {
+  border: 1px dashed rgba(37,99,235,0.42); border-radius: 7px;
+  padding: 8px; text-align: center; font-size: 0.72rem; color: var(--accent2);
+  cursor: pointer; touch-action: manipulation;
+}
+
+.btn-full {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); padding: 13px;
+  font-size: 0.82rem; font-family: inherit; margin-top: 7px;
+  cursor: pointer; touch-action: manipulation;
+}
+.btn-full:active { background: var(--accent); }
+.btn-full.dashed { border-style: dashed; color: var(--muted); background: none; }
+.btn-full.acc { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── FORMULARIOS (alta rápida) ──────────────── */
+/* 16px en los inputs: por debajo, iOS hace zoom al enfocarlos */
+.form-i {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); padding: 11px;
+  font-size: 16px; font-family: inherit;
+}
+.form-i:focus { outline: none; border-color: var(--accent); }
+.form-row { display: flex; gap: 7px; }
+.form-row > * { flex: 1; min-width: 0; }
+.sec-div {
+  border: none; border-top: 1px solid var(--border);
+  margin: 15px 0 13px;
+}
+
+/* ── TIRADAS NECESARIAS ─────────────────────── */
+.need {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 11px; overflow: hidden;
+}
+.need-r {
+  display: flex; justify-content: space-between;
+  padding: 7px 12px; border-bottom: 1px solid var(--border);
+  font-size: 0.76rem;
+}
+.need-r:last-child { border-bottom: none; }
+.need-v { color: var(--accent2); }
+.need-v.imp { color: var(--fail); }
+
+/* ── PIE / BOTÓN LANZAR ─────────────────────── */
+.pie {
+  flex-shrink: 0; padding: 10px 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.pie-in { max-width: 540px; margin: 0 auto; display: flex; gap: 8px; }
+.btn-l {
+  flex: 1; background: var(--accent); border: none; border-radius: 11px;
+  color: #fff; padding: 15px; font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; touch-action: manipulation;
+}
+.btn-l:active { opacity: 0.85; }
+.btn-l:disabled { background: var(--surface2); color: var(--muted); }
+.btn-s {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 11px; color: var(--text); padding: 15px 17px;
+  font-size: 0.9rem; cursor: pointer; touch-action: manipulation;
+}
+.btn-s:active { background: var(--accent); }
+.btn-s.acc { border-color: var(--accent); color: var(--accent2); }
+
+/* ── RESULTADO ──────────────────────────────── */
+.hero {
+  background: var(--surface); border: 1px solid rgba(34,196,122,0.4);
+  border-radius: 11px; padding: 16px 12px; text-align: center;
+}
+.hero.cero { border-color: var(--border); }
+
+/* Aviso de bajas aplicadas con su deshacer. Va en el cuerpo del resultado
+   porque el pie ya lleva cuatro botones y a 375 px no cabe un quinto. */
+.deshacer {
+  display: flex; align-items: center; gap: 9px;
+  background: rgba(232,160,48,0.1); border: 1px solid rgba(232,160,48,0.35);
+  border-radius: 9px; padding: 9px 11px; margin-bottom: 10px;
+  font-size: 0.72rem; color: var(--warn);
+}
+.deshacer span { flex: 1; min-width: 0; }
+.deshacer-b {
+  flex-shrink: 0; background: none; border: 1px solid rgba(232,160,48,0.5);
+  border-radius: 7px; color: var(--warn); padding: 0 14px;
+  /* 40px de alto: a 31 se quedaba corto para un dedo en el iPad */
+  min-height: 40px;
+  font-size: 0.72rem; font-family: inherit;
+  cursor: pointer; touch-action: manipulation;
+}
+.deshacer-b:active { background: rgba(232,160,48,0.2); }
+.hero-n { font-size: 2.3rem; line-height: 1; color: var(--success); }
+.hero.cero .hero-n { color: var(--muted); }
+.hero-l { font-size: 0.85rem; margin-top: 5px; }
+.hero-s { font-size: 0.68rem; color: var(--muted); margin-top: 5px; }
+.hero-vs { font-size: 0.7rem; color: var(--muted); margin-bottom: 9px; line-height: 1.5; }
+
+.paso {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: 8px 10px;
+}
+.paso-h {
+  display: flex; justify-content: space-between;
+  font-size: 0.74rem; margin-bottom: 6px;
+}
+.paso-h-c { color: var(--muted); }
+.dados { display: flex; flex-wrap: wrap; gap: 3px; }
+.d {
+  width: 21px; height: 21px; border-radius: 4px;
+  font-size: 0.68rem; display: flex; align-items: center; justify-content: center;
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+}
+.d.ok { background: rgba(34,196,122,0.15); border-color: rgba(34,196,122,0.5); color: var(--success); }
+.d.cr { background: rgba(232,160,48,0.18); border-color: var(--warn); color: var(--warn); }
+.d.sv { background: rgba(107,170,245,0.15); border-color: rgba(107,170,245,0.5); color: var(--accent2); }
+
+.alloc {
+  background: var(--surface); border: 1px solid rgba(232,160,48,0.35);
+  border-radius: 11px; padding: 10px 11px;
+}
+.al-r { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 3px 0; }
+.al-r.tot { border-top: 1px solid var(--border); margin-top: 5px; padding-top: 6px; }
+.al-ok { color: var(--success); }
+.al-w  { color: var(--warn); }
+
+.mods { display: flex; flex-wrap: wrap; gap: 4px; }
+.mod-c {
+  background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.25);
+  border-radius: 5px; padding: 3px 7px; font-size: 0.65rem; color: var(--accent2);
+}
+
+/* ── PANEL INFERIOR (SHEET) ─────────────────── */
+.ov {
+  display: none; position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0,0,0,0.6); z-index: 100;
+  align-items: flex-end;
+}
+.ov.open { display: flex; }
+.sheet {
+  background: var(--surface); border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; padding: 12px;
+  width: 100%;
+  /* El `vh` es obligatorio como respaldo: `dvh` solo existe desde iOS 15.4.
+     Con la barra de Safari desplegada, 88vh se sale de lo que se ve y el
+     botón «Listo» queda debajo del borde; `dvh` mide lo que hay de verdad. */
+  max-height: 88vh; max-height: 88dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.sheet-in { max-width: 540px; margin: 0 auto; }
+.grab { width: 34px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 11px; }
+.sh-t { font-size: 0.82rem; font-weight: 500; margin-bottom: 12px; }
+.sh-t-sub { font-size: 0.68rem; color: var(--muted); font-weight: 400; margin-top: 3px; }
+
+.fld { display: flex; flex-direction: column; gap: 5px; margin-bottom: 11px; }
+
+/* El perfil del arma dentro del panel del atacante: SOLO LECTURA. Enseña lo
+   que se va a tirar de verdad, con los modificadores ya aplicados. El arma
+   se edita en su ficha, desde la pantalla del ejército. */
+.perf-ro {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 10px; margin-bottom: 12px;
+  font-size: 0.72rem; color: var(--muted);
+}
+.perf-ro span { white-space: nowrap; }
+.perf-ro span + span::before { content: '·'; margin-right: 5px; opacity: 0.5; }
+
+.seg { display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 3px; }
+.seg-i {
+  flex: 1; padding: 9px 4px; text-align: center; font-size: 0.76rem;
+  border-radius: 6px; color: var(--muted);
+  cursor: pointer; touch-action: manipulation;
+}
+.seg-i.on { background: var(--accent); color: #fff; }
+
+.stepr {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px;
+}
+.sb {
+  width: 42px; height: 36px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; touch-action: manipulation; flex-shrink: 0;
+}
+.sb:active { background: var(--accent); }
+.sn { flex: 1; text-align: center; font-size: 1.15rem; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ch {
+  min-width: 42px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 9px 8px; text-align: center;
+  font-size: 0.76rem; color: var(--muted);
+  cursor: pointer; touch-action: manipulation; flex: 1;
+}
+.ch.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.tog {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 11px; margin-bottom: 5px;
+  cursor: pointer; touch-action: manipulation;
+}
+.tog.on { border-color: var(--accent); background: rgba(37,99,235,0.08); }
+.tog-b {
+  width: 17px; height: 17px; border-radius: 4px;
+  border: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; color: transparent;
+}
+.tog.on .tog-b { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tog-txt { flex: 1; }
+.tog-t { font-size: 0.78rem; }
+.tog-sub { font-size: 0.65rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+.tog.raf.on { border-color: var(--warn); background: rgba(232,160,48,0.09); }
+.tog.raf.on .tog-b { background: var(--warn); border-color: var(--warn); color: var(--bg); }
+
+.tog.off { opacity: 0.4; cursor: default; }
+.ch.off  { opacity: 0.35; cursor: default; }
+.seg.off { opacity: 0.4; }
+.seg.off .seg-i { cursor: default; }
+.stepr.off { opacity: 0.4; }
+.stepr.off .sb { cursor: default; }
+.fld-nota { font-size: 0.65rem; color: var(--muted); line-height: 1.4; }
+
+/* ── FILA DE ATRIBUTOS DEL ARMA ──────────────── */
+/* A, HA/HP, F, FP y D en una sola línea, cada uno un desplegable. En iOS un
+   <select> abre la rueda nativa, que con una mano va mejor que una fila de
+   chips, y las cinco columnas caben a 375 px sin desbordar. */
+.atr-row { display: flex; gap: 6px; }
+.atr { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.atr-l {
+  font-size: 0.58rem; color: var(--muted); letter-spacing: 0.8px;
+  text-transform: uppercase; text-align: center;
+}
+.atr-s {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text);
+  /* 16px es obligatorio: por debajo, iOS hace zoom al enfocar el campo */
+  font-size: 16px; padding: 10px 2px;
+  text-align: center; text-align-last: center;
+  cursor: pointer; touch-action: manipulation;
+}
+.atr-s:disabled { opacity: 0.35; cursor: default; }
+
+.auto-hits {
+  background: rgba(232,160,48,0.1); border: 1px solid rgba(232,160,48,0.3);
+  border-radius: 6px; padding: 9px; text-align: center;
+  font-size: 0.74rem; color: var(--warn);
+}
+.badge-raf {
+  background: rgba(232,160,48,0.16); border: 1px solid rgba(232,160,48,0.4);
+  border-radius: 5px; padding: 1px 6px; font-size: 0.62rem; color: var(--warn);
+}
+.mod-c.raf { background: rgba(232,160,48,0.1); border-color: rgba(232,160,48,0.3); color: var(--warn); }
+.need-v.auto { color: var(--warn); }
+
+.acord {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px; margin-bottom: 11px;
+  cursor: pointer; touch-action: manipulation;
+}
+.acord-t { flex: 1; font-size: 0.8rem; }
+.acord-n {
+  background: rgba(37,99,235,0.16); border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 5px; padding: 1px 7px; font-size: 0.66rem; color: var(--accent2);
+}
+.extra { display: none; }
+.extra.open { display: block; }
+
+.sh-btns { display: flex; gap: 8px; margin-top: 4px; }
+.b-canc {
+  flex: 1; background: none; border: 1px solid var(--border);
+  border-radius: 9px; color: var(--muted); padding: 13px;
+  font-size: 0.82rem; font-family: inherit;
+  cursor: pointer; touch-action: manipulation;
+}
+.b-ok {
+  flex: 2; background: var(--accent); border: none;
+  border-radius: 9px; color: #fff; padding: 13px;
+  font-size: 0.82rem; font-weight: 500; font-family: inherit;
+  cursor: pointer; touch-action: manipulation;
+}
+.b-ok.danger { background: var(--fail); }
+
+.aviso {
+  background: rgba(232,160,48,0.1); border: 1px solid rgba(232,160,48,0.3);
+  border-radius: 8px; padding: 9px 11px; font-size: 0.72rem;
+  color: var(--warn); line-height: 1.5; margin-bottom: 11px;
+}
+.nota-u {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 11px; font-size: 0.7rem;
+  color: var(--muted); line-height: 1.5; margin-bottom: 11px;
+}
+.info-l { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 7px; line-height: 1.5; }
+
+/* ── HISTORIAL ──────────────────────────────── */
+/* (Aquí estaban .h-item, .h-top y .h-sub, de cuando el historial se pintaba
+   de otra forma. La pantalla de historial usa .h-it, .h-t, .h-s y .h-f, que
+   se parecen tanto en el nombre que convenía no dejar las dos parejas.) */
+.h-n { color: var(--success); font-weight: 500; }
+
+.vacio { text-align: center; color: var(--muted); font-size: 0.76rem; padding: 22px 10px; }
+.hide { display: none; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <!-- El destino y el título los pone mostrarVista() desde la tabla VISTAS -->
+  <button class="hdr-b" id="btn-atras" style="display:none">←</button>
+  <span class="hdr-t" id="hdr-titulo">Lanzador v6</span>
+  <button class="hdr-b" onclick="abrirCajon()">☰</button>
+</div>
+
+<!-- ── CAJÓN LATERAL ── -->
+<div class="cajon-ov" id="cajon-ov" onclick="cerrarCajonSiFuera(event)">
+  <div class="cajon" id="cajon"></div>
+</div>
+
+<!-- ── VISTA: MONTAR PARTIDA ── -->
+<div class="scroll hide" id="vista-partida">
+  <div class="wrap" id="partida-cont"></div>
+</div>
+
+<!-- ── VISTA: UN EJÉRCITO Y SUS UNIDADES ── -->
+<div class="scroll hide" id="vista-ejercito">
+  <div class="wrap" id="ejercito-cont"></div>
+</div>
+
+<!-- ── VISTA DE CONFIGURACIÓN ── -->
+<div class="scroll hide" id="vista-setup">
+  <div class="wrap">
+    <div class="bandos" id="bandos"></div>
+
+    <div class="lbl">Atacante</div>
+    <div class="card" id="card-atk"></div>
+
+    <div class="vs">contra</div>
+
+    <div class="lbl">Defensor</div>
+    <div class="card" id="card-def"></div>
+
+    <div class="need" id="need"></div>
+    <div class="mods" id="mods-activos"></div>
+  </div>
+</div>
+
+<!-- ── VISTA DE RESULTADO ── -->
+<div class="scroll hide" id="vista-res">
+  <div class="wrap" id="res-cont"></div>
+</div>
+
+<!-- ── VISTA: COPIA DE SEGURIDAD ── -->
+<div class="scroll hide" id="vista-copia">
+  <div class="wrap" id="copia-cont"></div>
+</div>
+
+<!-- ── VISTA: HISTORIAL ── -->
+<div class="scroll hide" id="vista-hist">
+  <div class="wrap" id="hist-cont"></div>
+</div>
+
+<!-- ── PIE ── -->
+<div class="pie hide" id="pie">
+  <div class="pie-in" id="pie-setup">
+    <button class="btn-l" onclick="lanzar()" id="btn-lanzar">Lanzar</button>
+  </div>
+  <!-- Las tres secundarias a la izquierda y la principal a la derecha, que es
+       donde cae el pulgar. «Editar» no decía que te devolvía al lanzador y
+       «Repetir» tiraba lo mismo: desde el resultado, lo que suele hacer falta
+       es otra tirada distinta, o que conteste el que acaba de recibir. -->
+  <div class="pie-in hide" id="pie-res">
+    <button class="btn-s acc hide" id="btn-aplicar" onclick="abrirSheetBajas()">Aplicar</button>
+    <button class="btn-s" onclick="invertirYLanzar()" title="Invertir bandos">⇄</button>
+    <button class="btn-s" onclick="lanzar()">Repetir</button>
+    <button class="btn-l" onclick="verSetup()">Nueva tirada</button>
+  </div>
+</div>
+
+<!-- ── PANEL INFERIOR ── -->
+<div class="ov" id="ov" onclick="cerrarSiFuera(event)">
+  <div class="sheet" id="sheet"><div class="sheet-in" id="sheet-in"></div></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  ALMACENAMIENTO
+//  Las cuatro primeras claves son compartidas con el rastreador y con los
+//  lanzadores v3/v4/v5. LS_PARTIDA es propia del v6.
+// ═══════════════════════════════════════════════════════════
+const LS_ARMIES  = 'w40k_armies_v2';
+const LS_HIST    = 'w40k_roll_history';
+const LS_SYNC    = 'w40k_sync';
+const LS_PARTIDA = 'w40k_partida_v1';
+
+const leerJSON = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch(e) { return def; } };
+const guardarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+// ═══════════════════════════════════════════════════════════
+//  SIN DATOS PRECARGADOS
+//  Este lanzador no trae ningún perfil de ninguna unidad. Cada jugador da
+//  de alta las suyas con sus armas, y eso es lo único que existe.
+//
+//  Es deliberado: las versiones anteriores llevaban un catálogo propio que
+//  se quedó desactualizado y acabó dando salvaciones y perfiles erróneos
+//  sin que nadie se diera cuenta. Si no hay datos, no pueden estar mal.
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════════════════════
+// P.ladoA es siempre el bando atacante; invertir bandos los intercambia.
+const P = { ladoA: null, ladoB: null };
+
+const S = {
+  atk: { ejId: null, unitId: null, grupoId: null, perfilId: null,
+         unidad: null, arma: null,
+         tipo: 'dist', hab: 3,
+         A: '2', F: 4, FP: 0, D: '1', modelos: 1,
+         rafaga: false, ignCob: false,
+         // susX es la X de [GOLPES SOSTENIDOS X] (24.36): cuántos impactos
+         // extra da cada 6, no siempre uno
+         rep: 'no', repHer: false, letal: false, devast: false, sus: false, susX: 1,
+         modImp: 0, modHer: 0,
+         // Modificadores al perfil, solo para esta tirada. Existen para no
+         // tener que EDITAR el arma cuando una estratagema sube la Fuerza una
+         // fase: el arma dejaría de ser lo que dice el codex y el apaño se
+         // arrastraría hasta cambiar de arma. Éstos mueren con la tirada.
+         modF: 0, modFP: 0, modD: 0,
+         // ── Habilidades que dependen del momento (sección 24) ──
+         // No se guardan en el arma: cambian de una tirada a otra según si te
+         // moviste, si cargaste o a qué distancia estás. 0 o false = apagada.
+         anti: 0,          // [ANTI X Y+] 24.03 — la Y: herida crítica con Y+
+         area: 0,          // [ÁREA X] 24.05 — X dados por cada 5 del blanco
+         tajar: 0,         // [TAJAR X] 24.06 — igual, con blanco único
+         pesada: false,    // [PESADA] 24.16 — +1 al impactar si no te moviste
+         lanza: false,     // [LANZA] 24.21 — +1 al herir si cargaste
+         fusion: 0,        // [FUSIÓN X] 24.25 — +X al Daño a media distancia
+         fuegoRap: 0,      // [FUEGO RÁPIDO X] 24.30 — +X dados a media distancia
+         psiquica: false },// [PSÍQUICA] 24.29 — ignora modificadores al impactar
+  def: { ejId: null, unitId: null, unidad: null,
+         R: 4, S: 3, inv: 0, W: 1,
+         // `fnp` es «No hay dolor» (24.12), una habilidad de la unidad: se
+         // carga de ella al elegirla y aquí solo se cambia para esta tirada
+         minis: 0, fnp: 0, cob: false, hm: 0,
+         // Modificadores solo para esta tirada, como los del atacante
+         modR: 0, modSalv: 0 }
+};
+
+let ultimoResultado = null;
+
+// ═══════════════════════════════════════════════════════════
+//  ACCESO A LOS EJÉRCITOS
+// ═══════════════════════════════════════════════════════════
+const todosEjercitos = () => leerJSON(LS_ARMIES, {});
+const ejercito = id => todosEjercitos()[id] || null;
+
+function buscarUnidad(unitId) {
+  let encontrada = null;
+  Object.values(todosEjercitos()).forEach(ej => (ej.unidades || []).forEach(u => {
+    if (u.id === unitId) encontrada = u;
+  }));
+  return encontrada;
+}
+
+function contarVivas(unidad) {
+  return (unidad.grupos || []).reduce((s, g) => s + (g.modelos || []).filter(m => m.vivo).length, 0);
+}
+
+function contarMinis(ej) {
+  return (ej.unidades || []).reduce((s, u) => s + contarVivas(u), 0);
+}
+
+// Subtítulo de un ejército, igual en la lista, en el cajón y en su pantalla
+function resumenEj(ej) {
+  const n = (ej.unidades || []).length;
+  return `${esc(ej.faccion || 'Sin facción')} · ${n} unidad${n !== 1 ? 'es' : ''} · ${contarMinis(ej)} miniaturas vivas`;
+}
+
+// Aplana los grupos de una unidad en una lista de armas elegibles. Un grupo
+// con varios perfiles da un arma por perfil; `tipo` y `hab` salen del perfil
+// si los trae (extensión del v6) y si no, del grupo.
+function armasDeUnidad(u) {
+  const out = [];
+  (u.grupos || []).forEach(g => {
+    const vivos = (g.modelos || []).filter(m => m.vivo).length;
+    if (g.perfiles && g.perfiles.length) {
+      // Si el grupo se llama como la unidad, el prefijo solo roba ancho
+      const pref = g.nombre === u.nombre ? '' : `${g.nombre} — `;
+      g.perfiles.forEach(p => out.push({
+        grupoId: g.id, perfilId: p.id,
+        n: `${pref}${p.nombre}`,
+        tipo: p.tipo || g.tipo, hab: p.hab || g.hab,
+        A: String(p.A), F: p.F, FP: p.FP, D: String(p.D),
+        minis: vivos, auto: { ...(p.auto || {}), rafaga: !!p.rafaga }
+      }));
+    } else {
+      out.push({
+        grupoId: g.id, perfilId: null, n: g.nombre,
+        tipo: g.tipo, hab: g.hab,
+        A: String(g.A), F: g.F, FP: g.FP, D: String(g.D),
+        minis: vivos, auto: { ...(g.auto || {}), rafaga: !!g.rafaga }
+      });
+    }
+  });
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANTALLA: MONTAR PARTIDA
+// ═══════════════════════════════════════════════════════════
+function verPartida() {
+  mostrarVista('vista-partida');
+  document.getElementById('pie').classList.add('hide');
+  // Única pantalla que retoca su ←: sin los dos bandos no hay tirada a la
+  // que volver, así que se esconde
+  if (!(P.ladoA && P.ladoB && ejercito(P.ladoA) && ejercito(P.ladoB))) {
+    document.getElementById('btn-atras').style.display = 'none';
+  }
+  pintarPartida();
+}
+
+function pintarPartida() {
+  const armies = Object.values(todosEjercitos());
+  let h = `<div class="pt-h">Los dos bandos</div>
+    <div class="pt-s">Elige qué ejército ataca y cuál defiende. Puedes invertirlos
+    en cualquier momento desde la pantalla de tirada.</div>`;
+
+  if (!armies.length) {
+    h += `<div class="nota-u">Todavía no hay ningún ejército. Crea el tuyo y el del rival, y dale a cada uno sus unidades con sus armas.</div>`;
+  }
+
+  armies.forEach(ej => {
+    const rol = ej.id === P.ladoA ? 'Atacante' : (ej.id === P.ladoB ? 'Defensor' : '');
+    const cls = ej.id === P.ladoA ? ' a' : (ej.id === P.ladoB ? ' b' : '');
+    h += `<div class="ejcard${cls}" onclick="verEjercito('${ej.id}')">
+      <div class="ejcard-txt">
+        <div class="ejcard-n">${esc(ej.nombre)}</div>
+        <div class="ejcard-s">${resumenEj(ej)}</div>
+      </div>
+      ${rol ? `<span class="ejcard-rol">${rol}</span>` : '<span class="ejcard-rol">Sin bando</span>'}
+    </div>`;
+  });
+
+  h += `<button class="btn-full dashed" onclick="sheetNuevoEjercito()">+ Crear ejército</button>`;
+
+  const listo = P.ladoA && P.ladoB && P.ladoA !== P.ladoB;
+  h += `<button class="btn-full acc" style="margin-top:14px" ${listo ? 'onclick="empezar()"' : 'disabled'}>
+    ${listo ? 'Empezar a tirar' : 'Elige los dos bandos'}
+  </button>`;
+
+  h += `<div class="info-l">Toca un ejército para ver y editar sus unidades. El bando se cambia desde el menú ☰.</div>`;
+
+  document.getElementById('partida-cont').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANTALLA: UN EJÉRCITO Y SUS UNIDADES
+//  Las unidades se despliegan en el sitio con su ficha. Desde aquí se
+//  editan, se les añaden armas y se borran. El bando NO se cambia aquí:
+//  eso se hace desde el cajón, para no tocarlo sin querer en plena partida.
+// ═══════════════════════════════════════════════════════════
+let ejAbierto = null;              // ejército que se está viendo
+const unidadesAbiertas = new Set(); // unidades desplegadas
+
+function verEjercito(ejId) {
+  ejAbierto = ejId;
+  unidadesAbiertas.clear();
+  cerrarCajon();
+  mostrarVista('vista-ejercito');
+  document.getElementById('pie').classList.add('hide');
+  pintarEjercito();
+}
+
+function pintarEjercito() {
+  const ej = ejercito(ejAbierto);
+  if (!ej) { verPartida(); return; }
+
+  const esA = ej.id === P.ladoA, esB = ej.id === P.ladoB;
+  const rol = esA ? 'ataca' : (esB ? 'defiende' : 'sin bando');
+  const cls = esA ? ' a' : (esB ? ' b' : '');
+
+  let h = `<div class="ej-cab${cls}">
+    <div style="flex:1;min-width:0">
+      <div class="ej-cab-n">${esc(ej.nombre)}</div>
+      <div class="ej-cab-s">${resumenEj(ej)}</div>
+    </div>
+    <span class="ejcard-rol">${rol}</span>
+  </div>`;
+
+  // Sin esto no había forma de volver a poner las miniaturas en pie: el apaño
+  // era bajar el contador de cada unidad y volver a subirlo, arma por arma.
+  // El botón solo sale si hay alguna caída, para no ocupar sitio en vano.
+  const caidas = contarCaidas(ej);
+  if (caidas > 0) {
+    h += `<button class="btn-full" onclick="reiniciarEjercito('${ej.id}')">
+      Levantar ${caidas} miniatura${caidas !== 1 ? 's' : ''}
+    </button>
+    <div class="info-l" style="margin:5px 0 4px">
+      Al terminar una partida: devuelve todas las unidades a su tamaño completo.
+    </div>`;
+  }
+
+  if (!ej.unidades.length) {
+    h += `<div class="nota-u">Este ejército todavía no tiene unidades. Añade la primera con su arma.</div>`;
+  }
+
+  ej.unidades.forEach(u => {
+    const abierta = unidadesAbiertas.has(u.id);
+    const vivas = contarVivas(u);
+    const armas = armasDeUnidad(u);
+
+    h += `<div class="uni${abierta ? ' open' : ''}">
+      <div class="uni-top" onclick="toggleUnidad('${u.id}')">
+        <span class="uni-n">${esc(u.nombre)}</span>
+        <span class="uni-x">×${vivas}</span>
+        <span class="uni-ch">${abierta ? '▲' : '▼'}</span>
+      </div>`;
+
+    if (!abierta) {
+      const inv = u.inv ? ` Inv${u.inv}+` : '';
+      h += `<div class="uni-sub">R${u.R} S${u.S}+${inv} ${u.heridas}H · ${armas.length} arma${armas.length !== 1 ? 's' : ''}</div>`;
+    } else {
+      h += `<div class="uni-det">
+        <div class="uni-perf">
+          <div class="up"><div class="up-l">R</div><div class="up-v">${u.R}</div></div>
+          <div class="up"><div class="up-l">S</div><div class="up-v">${u.S}+</div></div>
+          <div class="up"><div class="up-l">Inv</div><div class="up-v">${u.inv ? u.inv + '+' : '—'}</div></div>
+          <div class="up"><div class="up-l">H</div><div class="up-v">${u.heridas}</div></div>
+          <div class="up"><div class="up-l">Vivas</div><div class="up-v">${vivas}</div></div>
+          <div class="up"><div class="up-l">Total</div><div class="up-v">${u.grupos.reduce((s, g) => s + g.modelos.length, 0)}</div></div>
+        </div>
+
+        <div class="uni-lbl">Armas</div>
+        ${armas.map(w => `
+          <div class="uni-arma" onclick="sheetArma('${u.id}','${w.grupoId}','${w.perfilId || ''}')">
+            <div class="uni-arma-t">
+              <div class="uni-arma-n">${esc(w.n)}${w.auto && w.auto.rafaga ? ' · ráfaga' : ''}</div>
+              <div class="uni-arma-s">${w.tipo === 'cc' ? 'Combate' : 'Disparo'} · A${esc(w.A)} · ${w.tipo === 'cc' ? 'HA' : 'HP'}${w.auto && w.auto.rafaga ? '—' : w.hab + '+'} · F${w.F} · PA${w.FP} · Daño ${esc(w.D)}</div>
+            </div>
+            <span class="uni-lap">✎</span>
+          </div>`).join('')}
+        <div class="uni-add" onclick="sheetArma('${u.id}', null)">+ Añadir arma</div>
+
+        <!-- Tres botones a partes iguales: «✎ Editar unidad» no cabía a
+             375 px con un tercero al lado, así que se queda en «✎ Editar» -->
+        <div class="uni-btns">
+          <div class="uni-bt" onclick="sheetEditarUnidad('${u.id}')">✎ Editar</div>
+          <div class="uni-bt" onclick="duplicarUnidad('${u.id}')">⧉ Duplicar</div>
+          <div class="uni-bt del" onclick="borrarUnidad('${u.id}')">Eliminar</div>
+        </div>
+      </div>`;
+    }
+    h += `</div>`;
+  });
+
+  h += `<button class="btn-full dashed" style="margin-top:10px" onclick="sheetAltaUnidad('${ej.id}')">+ Añadir unidad</button>`;
+  h += `<div class="info-l">El bando se cambia desde el menú ☰, para no tocarlo sin querer durante la partida.</div>`;
+
+  document.getElementById('ejercito-cont').innerHTML = h;
+}
+
+// Cuántas miniaturas caídas tiene un ejército entero
+const contarCaidas = ej => (ej.unidades || []).reduce((s, u) =>
+  s + (u.grupos || []).reduce((t, g) =>
+    t + (g.modelos || []).filter(m => !m.vivo).length, 0), 0);
+
+// ── REINICIAR EL EJÉRCITO ──
+// Para empezar otra partida. Es lo contrario de «Aplicar bajas», así que pide
+// confirmación igual que ella: rehace el estado de toda una partida.
+function reiniciarEjercito(ejId) {
+  const armies = todosEjercitos();
+  const ej = armies[ejId];
+  if (!ej) return;
+
+  const caidas = contarCaidas(ej);
+  if (!caidas) return;
+  if (!confirm(`¿Levantar las ${caidas} miniaturas caídas de ${ej.nombre}?\n\n`
+             + 'Todas sus unidades vuelven a su tamaño completo. Se usa al '
+             + 'terminar una partida.')) return;
+
+  (ej.unidades || []).forEach(u => (u.grupos || []).forEach(g =>
+    (g.modelos || []).forEach(m => { m.vivo = true; })));
+  guardarJSON(LS_ARMIES, armies);
+
+  // El deshacer apuntaba a miniaturas de este ejército: ya están todas en pie,
+  // así que usarlo no haría nada y el aviso solo confundiría
+  if (ultimasBajas && (ej.unidades || []).some(u => u.id === ultimasBajas.unitId)) {
+    ultimasBajas = null;
+  }
+
+  // Los bandos elegidos llevan copiado el recuento de miniaturas; si son de
+  // este ejército, acaba de quedarse corto
+  if (S.def.ejId === ejId && S.def.unitId) {
+    const u = buscarUnidad(S.def.unitId);
+    if (u) S.def.minis = contarVivas(u);
+  }
+  if (S.atk.ejId === ejId && S.atk.grupoId) {
+    const un = buscarUnidad(S.atk.unitId);
+    // Solo el recuento: volver a aplicar el arma entera apagaría las reglas
+    // situacionales que hubiera puestas
+    const w = un && armasDeUnidad(un).find(x =>
+      x.grupoId === S.atk.grupoId && (x.perfilId || '') === (S.atk.perfilId || ''));
+    if (w) S.atk.modelos = Math.max(1, w.minis || 1);
+  }
+
+  pintarEjercito();
+  pintarTodo();
+}
+
+function toggleUnidad(id) {
+  unidadesAbiertas.has(id) ? unidadesAbiertas.delete(id) : unidadesAbiertas.add(id);
+  pintarEjercito();
+}
+
+function borrarUnidad(unitId) {
+  const ej = ejercito(ejAbierto);
+  const u = ej && ej.unidades.find(x => x.id === unitId);
+  if (!u) return;
+  if (!confirm(`¿Eliminar "${u.nombre}" de ${ej.nombre}? No se puede deshacer.`)) return;
+
+  const armies = todosEjercitos();
+  armies[ejAbierto].unidades = armies[ejAbierto].unidades.filter(x => x.id !== unitId);
+  guardarJSON(LS_ARMIES, armies);
+  unidadesAbiertas.delete(unitId);
+
+  // Si la unidad borrada estaba elegida para tirar, se olvida
+  if (S.atk.unitId === unitId) Object.assign(S.atk, { unitId: null, unidad: null, arma: null });
+  if (S.def.unitId === unitId) Object.assign(S.def, { unitId: null, unidad: null });
+  pintarEjercito();
+}
+
+// (Aquí vivía rotarRol(), que rotaba el bando al tocar un ejército en la
+// pantalla de partida. Desde que esa tarjeta lleva a las unidades, el bando
+// se cambia solo desde el cajón, con rotarRolDesdeCajon(). Quedó sin llamar.)
+
+function guardarPartida() { guardarJSON(LS_PARTIDA, { ladoA: P.ladoA, ladoB: P.ladoB }); }
+
+// ── Crear ejército rival vacío ──
+function sheetNuevoEjercito() {
+  abrirSheet(`
+    <div class="grab"></div>
+    <div class="sh-t">Nuevo ejército</div>
+    <div class="fld">
+      <span class="lbl">Nombre</span>
+      <input class="form-i" id="inp-ej-nombre" placeholder="Ej. Orkos de Grukk" autocomplete="off">
+    </div>
+    <div class="fld">
+      <span class="lbl">Facción</span>
+      <input class="form-i" id="inp-ej-faccion" placeholder="Ej. Orkos, Necrones…" autocomplete="off">
+    </div>
+    <div class="sh-btns">
+      <button class="b-canc" onclick="cerrarSheet()">Cancelar</button>
+      <button class="b-ok" onclick="crearEjercito()">Crear</button>
+    </div>
+  `);
+  setTimeout(() => { const el = document.getElementById('inp-ej-nombre'); if (el) el.focus(); }, 60);
+}
+
+function crearEjercito() {
+  const nombre = (document.getElementById('inp-ej-nombre').value || '').trim();
+  if (!nombre) { alert('Ponle un nombre al ejército'); return; }
+  const faccion = (document.getElementById('inp-ej-faccion').value || '').trim();
+
+  const armies = todosEjercitos();
+  const ej = { id: uid(), nombre, faccion: faccion || 'Sin facción', unidades: [] };
+  armies[ej.id] = ej;
+  guardarJSON(LS_ARMIES, armies);
+
+  if (!P.ladoA) P.ladoA = ej.id;
+  else if (!P.ladoB) P.ladoB = ej.id;
+  guardarPartida();
+  cerrarSheet();
+  pintarPartida();
+}
+
+function empezar() {
+  // Deja algo elegido en cada bando para no entrar a una pantalla vacía
+  autoSeleccionar('atk', P.ladoA);
+  autoSeleccionar('def', P.ladoB);
+  verSetup();
+}
+
+// Deja algo elegido en ese bando SI NO HAY NADA, para no entrar a una
+// pantalla vacía. Lo que ya estuviera elegido no se toca: volver a la tirada
+// desde el cajón reseleccionaba siempre la primera unidad del ejército y
+// perdías la que tenías preparada.
+//
+// No se comprueba de qué bando es la unidad, solo que siga existiendo y que
+// su ejército siga jugando: elegir una unidad del ejército contrario está
+// permitido a propósito (heridas mortales a los tuyos, tiradas hipotéticas),
+// pero arrastrar una de una partida anterior no tendría sentido.
+function autoSeleccionar(lado, ejId) {
+  const lo = lado === 'atk' ? S.atk : S.def;
+  const sigueJugando = lo.ejId === P.ladoA || lo.ejId === P.ladoB;
+  const conArma = lado === 'def' || !!lo.arma;
+  if (lo.unitId && buscarUnidad(lo.unitId) && sigueJugando && conArma) return;
+
+  const ej = ejercito(ejId);
+  const u = (ej && ej.unidades || []).find(x => contarVivas(x) > 0) || (ej && ej.unidades || [])[0];
+  if (!u) {
+    if (lado === 'atk') Object.assign(S.atk, { ejId, unitId: null, unidad: null, arma: null });
+    else Object.assign(S.def, { ejId, unitId: null, unidad: null });
+    return;
+  }
+  if (lado === 'atk') elegirUnidadAtk(u.id, ejId, true);
+  else elegirUnidadDef(u.id, ejId, true);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INVERTIR BANDOS
+//  Intercambia los ejércitos y, si ambas unidades vienen de un ejército,
+//  también el atacante y el defensor: el que acaba de recibir pasa a disparar.
+// ═══════════════════════════════════════════════════════════
+function invertirBandos() {
+  const a = P.ladoA; P.ladoA = P.ladoB; P.ladoB = a;
+  guardarPartida();
+
+  const viejoAtk = S.atk.unitId, viejoAtkEj = S.atk.ejId;
+  const viejoDef = S.def.unitId, viejoDefEj = S.def.ejId;
+
+  if (viejoAtk && viejoDef) {
+    elegirUnidadAtk(viejoDef, viejoDefEj, true);
+    elegirUnidadDef(viejoAtk, viejoAtkEj, true);
+  } else {
+    autoSeleccionar('atk', P.ladoA);
+    autoSeleccionar('def', P.ladoB);
+  }
+  pintarTodo();
+}
+
+// Invertir desde el resultado tiene que llevar además al lanzador: si no,
+// cambia los bandos por detrás y te deja mirando la tirada anterior.
+function invertirYLanzar() { invertirBandos(); verSetup(); }
+
+// ═══════════════════════════════════════════════════════════
+//  SELECCIÓN DEL ATACANTE
+// ═══════════════════════════════════════════════════════════
+function sheetUnidadAtk() {
+  let h = `<div class="grab"></div><div class="sh-t">Unidad atacante</div>`;
+  h += bloqueEjercito(P.ladoA, 'atk', true);
+  h += bloqueEjercito(P.ladoB, 'atk', false);
+  h += `<div class="sh-btns" style="margin-top:12px">
+    <button class="b-canc" onclick="verPartida()">Partida</button>
+    <button class="b-ok" onclick="cerrarSheet()">Cerrar</button>
+  </div>`;
+  abrirSheet(h);
+}
+
+function sheetUnidadDef() {
+  let h = `<div class="grab"></div><div class="sh-t">Unidad defensora</div>`;
+  h += bloqueEjercito(P.ladoB, 'def', true);
+  h += bloqueEjercito(P.ladoA, 'def', false);
+  h += `<div class="sh-btns" style="margin-top:12px">
+    <button class="b-canc" onclick="verPartida()">Partida</button>
+    <button class="b-ok" onclick="cerrarSheet()">Cerrar</button>
+  </div>`;
+  abrirSheet(h);
+}
+
+// Un bloque de unidades por ejército. `propio` marca el ejército del bando
+// que toca, que va primero y resaltado.
+function bloqueEjercito(ejId, lado, propio) {
+  const ej = ejercito(ejId);
+  if (!ej) return '';
+  const sel = lado === 'atk' ? S.atk.unitId : S.def.unitId;
+  const fn  = lado === 'atk' ? 'elegirUnidadAtk' : 'elegirUnidadDef';
+
+  let h = `<div class="grp-t${propio ? ' act' : ''}">${esc(ej.nombre)}</div>`;
+
+  if (!(ej.unidades || []).length) {
+    h += `<div class="nota-u">Este ejército no tiene unidades todavía.</div>`;
+  }
+
+  (ej.unidades || []).forEach(u => {
+    const vivas = contarVivas(u);
+    const nArmas = armasDeUnidad(u).length;
+    h += `<div class="uitem${sel === u.id ? ' on' : ''}${vivas === 0 ? ' muerta' : ''}"
+               onclick="${fn}('${u.id}','${ej.id}')">
+      <div class="uitem-txt">
+        <div class="uitem-n">${esc(u.nombre)}</div>
+        <div class="uitem-s">${vivas === 0 ? 'Aniquilada' : vivas + ' viva' + (vivas !== 1 ? 's' : '')}
+          · R${u.R} S${u.S}+${u.inv ? ' Inv' + u.inv + '+' : ''} · ${u.heridas || 1}H
+          ${lado === 'atk' ? '· ' + nArmas + ' arma' + (nArmas !== 1 ? 's' : '') : ''}</div>
+      </div>
+      ${lado === 'atk' ? '<span class="pick-c">›</span>' : ''}
+    </div>`;
+  });
+
+  h += `<button class="btn-full dashed" onclick="sheetAltaUnidad('${ej.id}')">+ Añadir unidad a ${esc(ej.nombre)}</button>`;
+  return h;
+}
+
+function elegirUnidadAtk(unitId, ejId, silencioso) {
+  const u = buscarUnidad(unitId);
+  if (!u) return;
+  const armas = armasDeUnidad(u);
+  S.atk.ejId = ejId;
+  S.atk.unitId = unitId;
+  S.atk.unidad = u.nombre;
+  if (armas.length) aplicarArma(armas[0]);
+  else { S.atk.arma = null; S.atk.grupoId = null; S.atk.perfilId = null; pintarTodo(); }
+  if (!silencioso) { if (armas.length > 1) sheetArmaAtk(); else cerrarSheet(); }
+}
+
+function armasActuales() {
+  const u = S.atk.unitId ? buscarUnidad(S.atk.unitId) : null;
+  return u ? armasDeUnidad(u) : [];
+}
+
+function sheetArmaAtk() {
+  const armas = armasActuales();
+  if (!armas.length) { sheetUnidadAtk(); return; }
+
+  let h = `<div class="grab"></div>
+    <div class="sh-t">Arma<div class="sh-t-sub">${esc(S.atk.unidad || '')}</div></div>`;
+
+  armas.forEach(w => {
+    const sel = S.atk.grupoId === w.grupoId && S.atk.perfilId === w.perfilId;
+    h += `<div class="uitem${sel ? ' on' : ''}" onclick="elegirArma('${w.grupoId}','${w.perfilId || ''}')">
+      <div class="uitem-txt">
+        <div class="uitem-n">${esc(w.n)}</div>
+        <div class="uitem-s">A${esc(w.A)} · F${w.F} · PA${w.FP} · Daño ${esc(w.D)} · ${w.tipo === 'cc' ? 'HA' : 'HP'}${w.hab}+ · ${w.minis}m</div>
+      </div>
+      <span class="uitem-tag ${w.tipo}">${w.tipo === 'cc' ? 'Combate' : 'Disparo'}</span>
+    </div>`;
+  });
+
+  h += `<div class="sh-btns" style="margin-top:12px">
+    <button class="b-canc" onclick="sheetUnidadAtk()">← Otra unidad</button>
+    <button class="b-ok" onclick="cerrarSheet()">Listo</button>
+  </div>`;
+
+  abrirSheet(h);
+}
+
+function elegirArma(grupoId, perfilId) {
+  const w = armasActuales().find(x => x.grupoId === grupoId && (x.perfilId || '') === perfilId);
+  if (!w) return;
+  aplicarArma(w);
+  cerrarSheet();
+}
+
+// Vuelca un arma en el estado del atacante. Las reglas `auto` se marcan solas
+// y el resto se reinician, para no arrastrar lo marcado para el arma anterior.
+function aplicarArma(w) {
+  const auto = w.auto || {};
+  Object.assign(S.atk, {
+    arma: w.n, grupoId: w.grupoId, perfilId: w.perfilId,
+    tipo: w.tipo, hab: w.hab,
+    A: String(w.A), F: w.F, FP: w.FP, D: String(w.D),
+    modelos: Math.max(1, w.minis || 1),
+    rafaga: !!auto.rafaga, ignCob: !!auto.ignCob, repHer: !!auto.repHer,
+    sus: !!auto.sus, susX: auto.susX || 1,
+    letal: !!auto.letal, devast: !!auto.devast,
+    rep: 'no', modImp: 0, modHer: 0,
+    // Las situacionales se apagan al cambiar de arma: valían para la tirada
+    // anterior, no para ésta
+    anti: 0, area: 0, tajar: 0, pesada: false, lanza: false,
+    fusion: 0, fuegoRap: 0, psiquica: false,
+    modF: 0, modFP: 0, modD: 0
+  });
+  pintarTodo();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SELECCIÓN DEL DEFENSOR
+// ═══════════════════════════════════════════════════════════
+function elegirUnidadDef(unitId, ejId, silencioso) {
+  const u = buscarUnidad(unitId);
+  if (!u) return;
+  Object.assign(S.def, {
+    ejId, unitId, unidad: u.nombre,
+    R: u.R, S: u.S, inv: u.inv || 0, W: u.heridas || 1,
+    minis: contarVivas(u),
+    // El sin dolor viene de la unidad; antes se ponía a 0 aquí y había que
+    // volver a marcarlo en cada tirada, con lo fácil que es olvidarlo
+    fnp: u.fnp || 0,
+    cob: false, hm: 0, modR: 0, modSalv: 0
+  });
+  pintarTodo();
+  if (!silencioso) cerrarSheet();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EDITOR DE UNIDADES Y ARMAS
+//  Un único panel sirve para tres cosas según `nuevaU.modo`:
+//    'alta'   → unidad nueva con su primera arma
+//    'unidad' → el perfil defensivo de una unidad que ya existe
+//    'arma'   → una sola arma: nueva (grupoId a null) o la que se ha tocado
+//  Se hace así, y no con tres formularios, porque los campos son los mismos:
+//  lo único que cambia es qué bloques se pintan y qué se guarda.
+//  El multi-perfil (un arma con varios modos de disparo) se edita y también
+//  se crea desde aquí: «+ Añadir arma» añade SIEMPRE otro modo del arma que
+//  la unidad ya tiene, con las mismas miniaturas. Antes preguntaba a quién se
+//  le daba el arma y cuántas la llevaban, y resultaba lioso de usar en plena
+//  partida (decisión de Leo, 04/11/2026). Para que unas miniaturas lleven un
+//  arma distinta se da de alta otra unidad («Guardianes» 9 y «Guardianes —
+//  plataforma» 1), que además deja el recuento a la vista.
+// ═══════════════════════════════════════════════════════════
+let nuevaU = null;
+
+function sheetAltaUnidad(ejId) {
+  nuevaU = { modo: 'alta', ejId, unitId: null, grupoId: null, perfilId: null,
+             nombre: '', R: 4, S: 4, inv: 0, heridas: 1, fnp: 0, minis: 5,
+             aNombre: '', tipo: 'dist', hab: 3, A: '2', F: 4, FP: 0, D: '1', rafaga: false,
+             ...autoAlta(null) };
+  pintarAlta();
+}
+
+// ── DUPLICAR UNA UNIDAD ──
+// Abre el panel de alta con TODO copiado de la original, para confirmar o
+// ajustar antes de crear nada. Dar de alta una unidad son 21 controles y
+// dentro de un ejército el perfil se repite casi siempre, así que copiar y
+// renombrar es el camino corto.
+//
+// La copia nace entera: `modelos` se rehace con todas vivas aunque la
+// original tenga bajas. Una unidad nueva no empieza herida.
+function duplicarUnidad(unitId) {
+  const ej = ejercito(ejAbierto);
+  const u = ej && ej.unidades.find(x => x.id === unitId);
+  if (!u) return;
+
+  // Los grupos se copian en profundidad y con ids nuevos. Si compartieran id
+  // con los de la original, editar un arma de una tocaría la de la otra.
+  const grupos = JSON.parse(JSON.stringify(u.grupos || [])).map(g => {
+    g.id = uid();
+    if (g.perfiles) g.perfiles.forEach(p => { p.id = uid(); });
+    g.modelos = (g.modelos || []).map(() => ({ id: uid(), vivo: true }));
+    return g;
+  });
+
+  const primera = armasDeUnidad({ ...u, grupos })[0] || {};
+  nuevaU = {
+    modo: 'copia', ejId: ej.id, unitId: null, grupoId: null, perfilId: null,
+    origen: u.nombre,
+    nombre: nombreDeCopia(ej, u.nombre),
+    R: u.R, S: u.S, inv: u.inv || 0, heridas: u.heridas || 1, fnp: u.fnp || 0,
+    minis: (grupos[0] && grupos[0].modelos.length) || 1,
+    nGrupos: grupos.length,
+    gruposCopia: grupos,
+    // Cuántas armas vienen además de la que se edita abajo: el panel de alta
+    // solo sabe de una, y una copia a la que le faltan armas sería peor que
+    // no tener el botón. El Vidente de la colección tiene dos perfiles.
+    nArmas: armasDeUnidad({ ...u, grupos }).length,
+    aNombre: primera.n || '', tipo: primera.tipo || 'dist', hab: primera.hab || 3,
+    A: String(primera.A || '2'), F: primera.F || 4, FP: primera.FP || 0,
+    D: String(primera.D || '1'),
+    rafaga: !!(primera.auto && primera.auto.rafaga),
+    ...autoAlta(primera.auto)
+  };
+  pintarAlta();
+}
+
+// «Guardianes» → «Guardianes (2)», y si ya existe, (3). Mirar si el nombre
+// está libre evita dos unidades iguales en los selectores del lanzador.
+function nombreDeCopia(ej, base) {
+  const limpio = String(base).replace(/\s*\(\d+\)$/, '');
+  const usados = new Set((ej.unidades || []).map(x => x.nombre));
+  for (let i = 2; i < 99; i++) {
+    const n = `${limpio} (${i})`;
+    if (!usados.has(n)) return n;
+  }
+  return `${limpio} (copia)`;
+}
+
+// Solo el perfil defensivo. Las miniaturas se editan aquí, y este es ya el
+// único sitio donde se tocan: el panel del arma perdió su contador.
+// Una unidad creada desde este cambio tiene siempre un solo grupo, así que el
+// contador sale siempre. Con varios grupos —unidades de antes— sería ambiguo
+// a cuál aplicarlo, así que se avisa en vez de ofrecerlo.
+function sheetEditarUnidad(unitId) {
+  const ej = ejercito(ejAbierto);
+  const u = ej && ej.unidades.find(x => x.id === unitId);
+  if (!u) return;
+  const unico = u.grupos.length === 1 ? u.grupos[0] : null;
+
+  nuevaU = { modo: 'unidad', ejId: ej.id, unitId, grupoId: unico ? unico.id : null, perfilId: null,
+             nombre: u.nombre, R: u.R, S: u.S, inv: u.inv || 0, heridas: u.heridas || 1,
+             fnp: u.fnp || 0,
+             minis: unico ? (unico.modelos || []).length : 0,
+             nGrupos: u.grupos.length };
+  pintarAlta();
+}
+
+// `grupoId` a null significa arma nueva. `perfilId` solo llega cuando se ha
+// tocado un perfil concreto de un arma con varios modos de disparo.
+function sheetArma(unitId, grupoId, perfilId) {
+  const ej = ejercito(ejAbierto);
+  const u = ej && ej.unidades.find(x => x.id === unitId);
+  if (!u) return;
+
+  const g = grupoId ? u.grupos.find(x => x.id === grupoId) : null;
+  const p = (g && perfilId) ? (g.perfiles || []).find(x => x.id === perfilId) : null;
+  const fuente = p || g;   // de dónde salen A/F/FP/D
+
+  nuevaU = {
+    modo: 'arma', ejId: ej.id, unitId,
+    grupoId: g ? g.id : null,
+    perfilId: p ? p.id : null,
+    unidadNombre: u.nombre,
+    nGrupos: u.grupos.length,
+    nPerfiles: g && g.perfiles ? g.perfiles.length : 0,
+    // Ya no hay ni `destino` ni `minis`: un arma nueva es siempre otro modo
+    // del arma que la unidad tiene, con las mismas miniaturas, así que no hay
+    // nada que repartir ni que contar. El recuento vive en la ficha de la
+    // unidad y este panel no lo toca.
+    // El nombre del arma a la que se añadirá, solo para avisar en pantalla
+    destinoNombre: g ? '' : ((u.grupos[0] && u.grupos[0].nombre) || u.nombre),
+    aNombre: fuente ? (fuente.nombre || '') : '',
+    tipo: (p && p.tipo) || (g && g.tipo) || 'dist',
+    hab:  (p && p.hab)  || (g && g.hab)  || 3,
+    A: fuente ? String(fuente.A) : '2',
+    F: fuente ? fuente.F : 4,
+    FP: fuente ? fuente.FP : 0,
+    D: fuente ? String(fuente.D) : '1',
+    // `rafaga` vive suelta en el grupo o el perfil y las demás dentro de
+    // `auto`: así lo dejó el modelo de datos del rastreador y así lo lee
+    // armasDeUnidad(), que hace `{...p.auto, rafaga: !!p.rafaga}`
+    rafaga: fuente ? !!fuente.rafaga : false,
+    ...autoAlta(fuente && fuente.auto)
+  };
+  pintarAlta();
+}
+
+// Las habilidades que el lanzador sabe calcular y que se guardan EN EL ARMA.
+// Son las seis de la sección 24 que no dependen de la situación: las otras
+// ocho (anti, área, pesada, lanza…) cambian de una tirada a otra y viven en
+// «Reglas especiales» del lanzador, no aquí.
+const autoAlta = (auto) => ({
+  ignCob: !!(auto && auto.ignCob),
+  repHer: !!(auto && auto.repHer),
+  sus:    !!(auto && auto.sus),
+  susX:   (auto && auto.susX) || 1,
+  letal:  !!(auto && auto.letal),
+  devast: !!(auto && auto.devast)
+});
+
+// (Aquí vivía `sacarModelos`, que repartía miniaturas de las armas existentes
+// a un grupo nuevo. Al quitar la pregunta de quién lleva el arma no se crean
+// grupos nuevos desde la interfaz, así que se quedó sin usar y se borró.)
+
+// Convierte un grupo de un solo arma en multi-perfil: su A/F/FP/D pasan a ser
+// el primer perfil y se quitan del grupo, que es donde el modelo de datos
+// manda que vivan cuando hay perfiles. El grupo toma el nombre de la unidad
+// para que la lista no repita ese nombre delante de cada perfil.
+function aMultiPerfil(g, unidad) {
+  if (g.perfiles && g.perfiles.length) return;
+  g.perfiles = [{
+    id: uid(), nombre: g.nombre || 'Arma',
+    tipo: g.tipo, hab: g.hab,
+    A: String(g.A), F: g.F, FP: g.FP, D: String(g.D), rafaga: !!g.rafaga
+  }];
+  ['A', 'F', 'FP', 'D', 'rafaga'].forEach(k => delete g[k]);
+  g.nombre = unidad.nombre;
+}
+
+// Estira o recorta la lista de miniaturas de un grupo. Al recortar se quitan
+// primero las muertas: así bajar el número no resucita a nadie.
+function ajustarModelos(grupo, n) {
+  const ms = grupo.modelos || (grupo.modelos = []);
+  while (ms.length > n) {
+    const i = ms.findIndex(m => !m.vivo);
+    ms.splice(i >= 0 ? i : ms.length - 1, 1);
+  }
+  while (ms.length < n) ms.push({ id: uid(), vivo: true });
+}
+
+// Guarda lo escrito en los inputs antes de repintar, igual que hace el
+// rastreador: si no, al tocar un chip se perderían los textos
+function leerAlta() {
+  if (!nuevaU) return;
+  const n = document.getElementById('inp-u-nombre');
+  const a = document.getElementById('inp-u-arma');
+  if (n) nuevaU.nombre = n.value;
+  if (a) nuevaU.aNombre = a.value;
+}
+
+function setAlta(campo, valor) {
+  leerAlta();
+  const num = ['R','S','inv','heridas','minis','hab','F','FP','susX','fnp'];
+  nuevaU[campo] = num.includes(campo) ? parseInt(valor) : valor;
+  pintarAlta();
+}
+
+function pasoAlta(campo, delta) {
+  leerAlta();
+  // `minis` admite 0 porque un arma puede llevarla ninguna miniatura
+  // (el caso del arma de la plataforma o del arma suelta de un personaje)
+  // `minis` ya solo se toca desde la ficha de la unidad, así que no hay más
+  // tope que éste: el de las miniaturas que las otras armas podían ceder
+  // desapareció con la pregunta de quién lleva el arma.
+  const lim = { R: [1,14], heridas: [1,30], minis: [0,60], F: [1,20] }[campo] || [0,99];
+  nuevaU[campo] = Math.max(lim[0], Math.min(lim[1], (nuevaU[campo] || 0) + delta));
+  pintarAlta();
+}
+
+function togAlta(campo) {
+  leerAlta();
+  nuevaU[campo] = !nuevaU[campo];
+  pintarAlta();
+}
+
+function pintarAlta() {
+  const u = nuevaU;
+  const ej = ejercito(u.ejId);
+  const un = (ej && u.unitId) ? (ej.unidades || []).find(x => x.id === u.unitId) : null;
+  const stepAlta = (campo, valor) => `<div class="stepr">
+      <div class="sb" onclick="pasoAlta('${campo}',-1)">−</div>
+      <div class="sn">${valor}</div>
+      <div class="sb" onclick="pasoAlta('${campo}',1)">+</div>
+    </div>`;
+  const chipsAlta = (vals, actual, campo, apagado) => `<div class="chips">${vals.map(v => {
+      const val = typeof v === 'object' ? v.v : v;
+      const txt = typeof v === 'object' ? v.t : v;
+      const sel = !apagado && String(val) === String(actual) ? ' on' : '';
+      return `<div class="ch${sel}${apagado ? ' off' : ''}"${apagado ? '' : ` onclick="setAlta('${campo}','${val}')"`}>${esc(txt)}</div>`;
+    }).join('')}</div>`;
+
+  // Un atributo del arma: etiqueta corta arriba y desplegable debajo. Es lo
+  // que forma la fila A / HA-HP / F / FP / D. `off` lo deja a la vista pero
+  // inerte, que es como se marca la habilidad cuando el arma es de ráfaga.
+  const selAtr = (campo, etiq, vals, actual, off) => {
+    const ops = vals.map(v => {
+      const val = typeof v === 'object' ? v.v : v;
+      const txt = typeof v === 'object' ? v.t : v;
+      // Se compara en texto a propósito: `hab`, `F` y `FP` son números y `A`
+      // y `D` son cadenas («D3»), y el value de un <option> siempre es cadena
+      const sel = String(val) === String(actual) ? ' selected' : '';
+      return `<option value="${esc(val)}"${sel}>${esc(txt)}</option>`;
+    }).join('');
+    return `<label class="atr">
+      <span class="atr-l">${esc(etiq)}</span>
+      <select class="atr-s"${off ? ' disabled' : ''}
+              onchange="setAlta('${campo}',this.value)">${ops}</select>
+    </label>`;
+  };
+
+  // ── Bloque del perfil defensivo de la unidad ──
+  const bloqueUnidad = `
+    <div class="fld">
+      <span class="lbl">Nombre de la unidad</span>
+      <input class="form-i" id="inp-u-nombre" value="${esc(u.nombre || '')}"
+             placeholder="Ej. Chicos orkos" autocomplete="off">
+    </div>
+
+    ${(u.modo === 'alta' || u.grupoId || (u.modo === 'copia' && u.nGrupos === 1)) ? `
+    <div class="fld">
+      <span class="lbl">Miniaturas</span>
+      ${stepAlta('minis', u.minis)}
+    </div>` : `
+    <div class="nota-u">
+      Esta unidad se creó con ${u.nGrupos} armas repartidas entre miniaturas
+      distintas, y su número ya no se cambia desde aquí. Si lo necesitas,
+      vuelve a darla de alta.
+    </div>`}
+
+    <div class="form-row">
+      <div class="fld">
+        <span class="lbl">Resistencia</span>
+        ${stepAlta('R', u.R)}
+      </div>
+      <div class="fld">
+        <span class="lbl">Heridas por miniatura</span>
+        ${stepAlta('heridas', u.heridas)}
+      </div>
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Salvación</span>
+      ${chipsAlta([{v:2,t:'2+'},{v:3,t:'3+'},{v:4,t:'4+'},{v:5,t:'5+'},{v:6,t:'6+'},{v:7,t:'—'}], u.S, 'S')}
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Salvación invulnerable</span>
+      ${chipsAlta([{v:0,t:'—'},{v:2,t:'2+'},{v:3,t:'3+'},{v:4,t:'4+'},{v:5,t:'5+'},{v:6,t:'6+'}], u.inv, 'inv')}
+    </div>
+
+    <div class="fld">
+      <span class="lbl">No hay dolor</span>
+      ${chipsAlta([{v:0,t:'—'},{v:4,t:'4+'},{v:5,t:'5+'},{v:6,t:'6+'}], u.fnp || 0, 'fnp')}
+      <span class="fld-nota">
+        Habilidad de la unidad (24.12), no del arma que la ataca. Se guarda
+        aquí y el lanzador la carga sola al elegirla como defensora; antes
+        había que marcarla en cada tirada.
+      </span>
+    </div>`;
+
+  // ── Bloque de un arma ──
+  // Ya no se pregunta quién la lleva ni cuántas miniaturas: un arma nueva es
+  // siempre otro modo de la que la unidad ya tiene, con las mismas miniaturas.
+  // Solo queda una línea de aviso para que no parezca que se ha perdido algo.
+  const armaNueva = u.modo === 'arma' && !u.grupoId;
+
+  // ── Habilidades del arma ──
+  // Las seis que el lanzador sabe calcular sin saber nada de la mesa.
+  // Ráfaga e ignora cobertura **solo salen a distancia**: la cobertura de 11ª
+  // (13.08) únicamente afecta a ataques a distancia, y un arma de combate que
+  // impactase sola no tiene sentido. Las otras cuatro valen en los dos casos.
+  const togA = (campo, texto, sub) => `
+    <div class="tog${u[campo] ? ' on' : ''}" onclick="togAlta('${campo}')">
+      <div class="tog-b">✓</div>
+      <div class="tog-txt">
+        <div class="tog-t">${texto}</div>
+        <div class="tog-sub">${sub}</div>
+      </div>
+    </div>`;
+
+  const bloqueHabilidades = () => {
+    const dist = u.tipo !== 'cc';
+    return `
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:9px">Habilidades del arma</div>
+    ${dist ? togA('rafaga', 'Ráfaga', 'Impacta sola, sin tirada') : ''}
+    ${dist ? togA('ignCob', 'Ignora cobertura', 'El blanco no se beneficia de cobertura') : ''}
+    ${togA('letal',  'Impactos letales', 'El 6 al impactar hiere solo; el blanco salva igual')}
+    ${togA('devast', 'Heridas devastadoras', 'El 6 al herir inflige el Daño en mortales')}
+    ${togA('repHer', 'Acoplada', 'Repite las tiradas para herir fallidas')}
+    ${togA('sus',    'Golpes sostenidos', `${u.susX || 1} impacto${(u.susX || 1) !== 1 ? 's' : ''} extra por cada 6 al impactar`)}
+    ${u.sus ? `
+    <div class="fld" style="margin-top:-2px">
+      <span class="lbl">La X de [Golpes sostenidos X]</span>
+      ${chipsAlta([1,2,3], u.susX || 1, 'susX')}
+    </div>` : ''}
+    <div class="fld-nota" style="margin-top:4px">
+      Las que dependen del momento —anti, área, pesada, lanza, fusión, fuego
+      rápido, tajar y psíquica— se marcan al tirar, en «Reglas especiales».
+    </div>`;
+  };
+  const bloqueArma = `
+    <div class="fld">
+      <span class="lbl">Nombre del arma</span>
+      <input class="form-i" id="inp-u-arma" value="${esc(u.aNombre || '')}"
+             placeholder="Ej. Pistola slugga" autocomplete="off">
+    </div>
+
+    ${armaNueva && u.destinoNombre ? `
+    <div class="nota-u">
+      Se añade como otro modo de ${esc(u.destinoNombre)}: la llevan las mismas
+      miniaturas y el recuento de la unidad no cambia.
+    </div>` : ''}
+
+    <div class="fld">
+      <span class="lbl">Tipo</span>
+      <div class="seg">
+        <div class="seg-i${u.tipo === 'dist' ? ' on' : ''}" onclick="setAlta('tipo','dist')">Disparo</div>
+        <div class="seg-i${u.tipo === 'cc' ? ' on' : ''}" onclick="setAlta('tipo','cc')">Combate</div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <div class="atr-row">
+        ${selAtr('A',   'A',  ['1','2','3','4','5','6','D3','D6','2D6'], u.A)}
+        ${selAtr('hab', u.tipo === 'cc' ? 'HA' : 'HP',
+                 [2,3,4,5,6].map(v => ({ v, t: v + '+' })), u.hab, u.rafaga)}
+        ${selAtr('F',   'F',  Array.from({length:20}, (_,i) => i + 1), u.F)}
+        ${selAtr('FP',  'FP', [0,-1,-2,-3,-4,-5], u.FP)}
+        ${selAtr('D',   'D',  OPC_DAÑO, u.D)}
+      </div>
+      <span class="fld-nota">${u.rafaga
+        ? 'La habilidad no se usa: ráfaga impacta automáticamente.'
+        : `Ataques · ${u.tipo === 'cc' ? 'habilidad de armas' : 'habilidad de proyectiles'} · fuerza · penetración de armadura · daño.`}</span>
+    </div>
+
+    ${bloqueHabilidades()}`;
+
+  // ── Cabecera, cuerpo y botones según el modo ──
+  let titulo, sub, cuerpo, textoOk, extraBtn = '';
+
+  if (u.modo === 'alta') {
+    titulo = 'Nueva unidad';
+    sub = ej ? ej.nombre : '';
+    cuerpo = bloqueUnidad +
+      `<hr class="sec-div"><div class="lbl" style="margin-bottom:9px">Su arma</div>` + bloqueArma +
+      `<div class="nota-u">Luego podrás añadirle más armas desde su ficha.</div>`;
+    textoOk = 'Añadir unidad';
+
+  } else if (u.modo === 'copia') {
+    titulo = 'Duplicar unidad';
+    sub = `copia de ${u.origen}`;
+    cuerpo = bloqueUnidad
+      + `<hr class="sec-div"><div class="lbl" style="margin-bottom:9px">Su arma</div>`
+      + bloqueArma
+      + (u.nArmas > 1 ? `<div class="nota-u">
+          ${u.nArmas === 2
+            ? 'Se copia también su otra arma, tal cual. Aquí solo se edita la primera; la otra, luego desde su ficha.'
+            : `Se copian también sus otras ${u.nArmas - 1} armas, tal cual. Aquí solo se edita la primera; las demás, luego desde su ficha.`}
+        </div>` : '')
+      + `<div class="nota-u">La copia nace con todas las miniaturas en pie,
+          aunque ${esc(u.origen)} tenga bajas.</div>`;
+    textoOk = 'Crear copia';
+
+  } else if (u.modo === 'unidad') {
+    titulo = 'Editar unidad';
+    sub = ej ? ej.nombre : '';
+    cuerpo = bloqueUnidad;
+    textoOk = 'Guardar';
+
+  } else {
+    titulo = u.grupoId ? 'Editar arma' : 'Nueva arma';
+    sub = u.unidadNombre;
+    cuerpo = bloqueArma;
+    textoOk = u.grupoId ? 'Guardar' : 'Añadir arma';
+    // Solo se puede borrar si queda algo detrás: ni la única arma de la
+    // unidad ni el único perfil de un arma multi-perfil
+    const puedeBorrar = u.grupoId && (u.perfilId ? u.nPerfiles > 1 : u.nGrupos > 1);
+    if (puedeBorrar) {
+      extraBtn = `<div class="uni-bt del" style="margin-top:10px" onclick="borrarArmaAlta()">Eliminar esta arma</div>`;
+    } else if (u.grupoId) {
+      extraBtn = `<div class="nota-u">No se puede eliminar: es lo único que tiene.
+        Elimina la unidad entera si ya no la quieres.</div>`;
+    }
+  }
+
+  abrirSheet(`
+    <div class="grab"></div>
+    <div class="sh-t">${titulo}${sub ? `<div class="sh-t-sub">${esc(sub)}</div>` : ''}</div>
+    ${cuerpo}
+    ${extraBtn}
+    <div class="sh-btns">
+      <button class="b-canc" onclick="cerrarSheet()">Cancelar</button>
+      <button class="b-ok" onclick="guardarAlta()">${textoOk}</button>
+    </div>
+  `);
+}
+
+function guardarAlta() {
+  leerAlta();
+  const u = nuevaU;
+
+  const armies = todosEjercitos();
+  const ej = armies[u.ejId];
+  if (!ej) { alert('Ese ejército ya no existe.'); cerrarSheet(); return; }
+
+  // Los valores del arma, tal y como se guardan en un grupo o en un perfil
+  const campsArma = () => {
+    // Ráfaga e ignora cobertura solo existen a distancia: si el arma pasa a
+    // combate se apagan al guardar, no solo se dejan de pintar. Si no, un
+    // arma que fue de disparo seguiría impactando sola en cuerpo a cuerpo
+    const cc = u.tipo === 'cc';
+    return {
+      nombre: (u.aNombre || '').trim() || 'Arma',
+      tipo: u.tipo, hab: u.hab,
+      A: String(u.A), F: u.F, FP: u.FP, D: String(u.D),
+      rafaga: !cc && !!u.rafaga,
+      auto: {
+        ignCob: !cc && !!u.ignCob,
+        repHer: !!u.repHer,
+        sus: !!u.sus, susX: u.susX || 1,
+        letal: !!u.letal, devast: !!u.devast
+      }
+    };
+  };
+
+  if (u.modo === 'copia') {
+    if (!(u.nombre || '').trim()) { alert('Ponle un nombre a la unidad'); return; }
+
+    const grupos = u.gruposCopia;
+    // Lo editado en el panel se vuelca sobre la PRIMERA arma, que es la que
+    // el panel enseña. Las demás van tal cual.
+    const g0 = grupos[0];
+    if (g0) {
+      const campos = campsArma();
+      if (g0.perfiles && g0.perfiles.length) {
+        // En un arma multi-perfil, A/F/FP/D viven en el perfil y no en el
+        // grupo: escribirlos en el grupo los dejaría ahí sin que nadie los lea
+        Object.assign(g0.perfiles[0], campos);
+        delete g0.perfiles[0].auto;
+        g0.perfiles[0].auto = campos.auto;
+      } else {
+        Object.assign(g0, campos);
+      }
+      // El contador solo se ofrece con un grupo; con varios, cada uno
+      // conserva el suyo, igual que al editar una unidad de antes
+      if (grupos.length === 1) ajustarModelos(g0, Math.max(1, u.minis));
+    }
+
+    ej.unidades.push({
+      id: uid(), nombre: u.nombre.trim(),
+      R: u.R, S: u.S, inv: u.inv || 0, heridas: u.heridas || 1, fnp: u.fnp || 0,
+      grupos
+    });
+    guardarJSON(LS_ARMIES, armies);
+    trasGuardar(null);
+    return;
+  }
+
+  if (u.modo === 'alta') {
+    if (!(u.nombre || '').trim()) { alert('Ponle un nombre a la unidad'); return; }
+    if (u.minis < 1) { alert('La unidad necesita al menos una miniatura'); return; }
+
+    ej.unidades.push({
+      id: uid(), nombre: u.nombre.trim(),
+      R: u.R, S: u.S, inv: u.inv || 0, heridas: u.heridas || 1, fnp: u.fnp || 0,
+      grupos: [Object.assign(campsArma(), {
+        id: uid(),
+        modelos: Array.from({ length: u.minis }, () => ({ id: uid(), vivo: true }))
+      })]
+    });
+    guardarJSON(LS_ARMIES, armies);
+    trasGuardar(null);
+    return;
+  }
+
+  const un = ej.unidades.find(x => x.id === u.unitId);
+  if (!un) { alert('Esa unidad ya no existe.'); cerrarSheet(); return; }
+
+  if (u.modo === 'unidad') {
+    if (!(u.nombre || '').trim()) { alert('Ponle un nombre a la unidad'); return; }
+    Object.assign(un, {
+      nombre: u.nombre.trim(),
+      R: u.R, S: u.S, inv: u.inv || 0, heridas: u.heridas || 1,
+      fnp: u.fnp || 0
+    });
+    // Solo se tocan las miniaturas si el panel las mostraba (un único arma)
+    if (u.grupoId) {
+      const g = un.grupos.find(x => x.id === u.grupoId);
+      if (g) ajustarModelos(g, u.minis);
+    }
+
+  } else {
+    if (u.grupoId) {
+      const g = un.grupos.find(x => x.id === u.grupoId);
+      if (!g) { alert('Esa arma ya no existe.'); cerrarSheet(); return; }
+      if (u.perfilId) {
+        const p = (g.perfiles || []).find(x => x.id === u.perfilId);
+        if (p) Object.assign(p, campsArma());
+      } else {
+        Object.assign(g, campsArma());
+      }
+      // Editar un arma ya no toca el recuento: ese contador se fue del panel
+      // y las miniaturas se cambian desde la ficha de la unidad.
+
+    } else {
+      // Arma nueva: siempre otro modo de la primera arma de la unidad, con
+      // las mismas miniaturas. No se crean grupos nuevos desde la interfaz,
+      // así que el invariante «los grupos no se solapan» se cumple solo y la
+      // unidad no puede crecer sin querer.
+      const g = un.grupos[0];
+      if (!g) { alert('Esa unidad no tiene ningún arma.'); cerrarSheet(); return; }
+      aMultiPerfil(g, un);
+      g.perfiles.push(Object.assign({ id: uid() }, campsArma()));
+    }
+  }
+
+  guardarJSON(LS_ARMIES, armies);
+  trasGuardar(u.unitId);
+}
+
+function borrarArmaAlta() {
+  const u = nuevaU;
+  const armies = todosEjercitos();
+  const ej = armies[u.ejId];
+  const un = ej && ej.unidades.find(x => x.id === u.unitId);
+  const g = un && un.grupos.find(x => x.id === u.grupoId);
+  if (!g) { cerrarSheet(); return; }
+
+  const p = u.perfilId ? (g.perfiles || []).find(x => x.id === u.perfilId) : null;
+  const queNombre = p ? p.nombre : g.nombre;
+  if (!confirm(`¿Eliminar "${queNombre}" de ${un.nombre}? No se puede deshacer.`)) return;
+
+  if (p) g.perfiles = g.perfiles.filter(x => x.id !== u.perfilId);
+  else   un.grupos = un.grupos.filter(x => x.id !== u.grupoId);
+
+  guardarJSON(LS_ARMIES, armies);
+
+  // Si era el arma elegida para tirar, se olvida
+  if (S.atk.grupoId === u.grupoId && (!u.perfilId || S.atk.perfilId === u.perfilId)) {
+    Object.assign(S.atk, { arma: null, grupoId: null, perfilId: null });
+  }
+  trasGuardar(u.unitId);
+}
+
+// Cierra el panel y repinta lo que haya delante. Si la unidad editada era la
+// elegida para tirar, se recarga: así los dados usan los valores nuevos y no
+// los que se habían copiado al estado antes de la edición.
+function trasGuardar(unitId) {
+  if (unitId) {
+    if (S.def.unitId === unitId) elegirUnidadDef(unitId, S.def.ejId, true);
+    if (S.atk.unitId === unitId && S.atk.grupoId) {
+      const un = buscarUnidad(unitId);
+      const armas = un ? armasDeUnidad(un) : [];
+      // Si el arma elegida ya no casa exacta —acaba de convertirse en
+      // multi-perfil, por ejemplo— se cae al primer perfil de ese mismo grupo
+      const w = armas.find(x =>
+                  x.grupoId === S.atk.grupoId && (x.perfilId || '') === (S.atk.perfilId || ''))
+             || armas.find(x => x.grupoId === S.atk.grupoId);
+      if (w) aplicarArma(w);
+      else Object.assign(S.atk, { arma: null, grupoId: null, perfilId: null });
+    }
+  }
+  cerrarSheet();
+
+  const visible = id => !document.getElementById(id).classList.contains('hide');
+  if (visible('vista-ejercito'))      pintarEjercito();
+  else if (visible('vista-partida'))  pintarPartida();
+  else                                pintarTodo();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DADOS Y REGLAS
+// ═══════════════════════════════════════════════════════════
+// Un dado de M caras. `Math.ceil(Math.random() * 3)` daría 0 en el caso
+// (rarísimo, pero existe) de que Math.random() devuelva exactamente 0.
+const dN = m => Math.floor(Math.random() * m) + 1;
+const d6 = () => dN(6);
+const d3 = () => dN(3);
+
+// Reconoce NdM+K: «D6», «1D6», «2D6», «D6+1», «D3+2», «2D6-1»… Antes solo
+// valían las tres cadenas exactas D3, D6 y 2D6 y cualquier otra caía en el
+// `parseInt`, que para «D6+1» da NaN y se quedaba en daño 1 **sin avisar**.
+// Por eso el intérprete se tocó antes que la lista de opciones.
+const RE_DADO = /^(\d*)D(\d+)([+-]\d+)?$/;
+
+// Las opciones de daño, en un solo sitio: las usan el panel del arma y el
+// panel rápido del lanzador, y si se escriben dos veces acaban divergiendo.
+// Se escriben «D6+1» y no «1D6+1» para que casen con los «D3» y «D6» que ya
+// había; el intérprete acepta las dos formas igual.
+const OPC_DAÑO = ['1','2','3','4','5','6',
+                  'D3','D3+1','D3+2',
+                  'D6','D6+1','D6+2','D6+3',
+                  '2D6'];
+
+function resolverDado(x) {
+  if (typeof x === 'number') return x;
+  const m = RE_DADO.exec(String(x).toUpperCase().replace(/\s/g, ''));
+  if (!m) return parseInt(x) || 1;
+  const n = parseInt(m[1] || '1'), caras = parseInt(m[2]), fijo = parseInt(m[3] || '0');
+  let t = fijo;
+  for (let i = 0; i < n; i++) t += dN(caras);
+  // El daño nunca baja de 0: un «2D6-1» que saliera por debajo no cura
+  return Math.max(0, t);
+}
+
+function valorMedio(x) {
+  if (typeof x === 'number') return x;
+  const m = RE_DADO.exec(String(x).toUpperCase().replace(/\s/g, ''));
+  if (!m) return parseInt(x) || 1;
+  const n = parseInt(m[1] || '1'), caras = parseInt(m[2]), fijo = parseInt(m[3] || '0');
+  return Math.max(0, n * (caras + 1) / 2 + fijo);
+}
+
+function objHerida(F, R) {
+  if (F >= R * 2) return 2;
+  if (F > R)      return 3;
+  if (F === R)    return 4;
+  if (F * 2 <= R) return 6;
+  return 5;
+}
+
+// ── COBERTURA (11ª, 13.08) ──
+// «Siempre que un ataque A DISTANCIA tome como blanco una unidad que se
+// beneficia de cobertura contra él, empeora en 1 el atributo HP de ese
+// ataque.» En 10ª sumaba 1 a la salvación, que es como estaba implementada.
+// El cambio tiene dos efectos secundarios: en combate ya no cuenta, y contra
+// ráfaga tampoco, porque si se impacta sin tirada no hay HP que empeorar.
+const hayCobertura = () =>
+  S.def.cob && !S.atk.ignCob && S.atk.tipo === 'dist' && !S.atk.rafaga;
+
+// HP/HA necesario tras los modificadores, en un solo sitio para que la
+// cobertura entre una vez y no en las tres copias que había. El tope de 6
+// vale porque un 6 sin modificar impacta siempre.
+// [PSÍQUICA] (24.29): «puedes ignorar cualquier modificador, o todos ellos»
+// al HP/HA y a la tirada para impactar. Es opcional y se elige por ataque, así
+// que la herramienta hace la jugada buena: tira los que restan (la cobertura y
+// un modificador negativo) y se queda los que suman. Pesada no se ignora:
+// también es un modificador, pero favorable.
+const habEfectiva = () => {
+  const a = S.atk;
+  const cob = hayCobertura() && !a.psiquica;
+  const mod = a.psiquica ? Math.max(0, a.modImp) : a.modImp;
+  // [PESADA] (24.16): suma 1 a la tirada para impactar, o sea que baja en 1
+  // el resultado necesario. Solo en la fase de disparo, como dice la regla.
+  const pes = (a.pesada && a.tipo === 'dist') ? 1 : 0;
+  return Math.max(2, Math.min(6, a.hab - mod + (cob ? 1 : 0) - pes));
+};
+
+// ── RESULTADO NECESARIO PARA HERIR (11ª, 05.02) ──
+// En un solo sitio por el mismo motivo que habEfectiva(): estaba copiado en
+// tres, y una copia sin arreglar deja la pantalla diciendo una cosa y los
+// dados haciendo otra.
+//
+// El tope es 6, no 7. La tabla de la página 18 comprueba las condiciones EN
+// ORDEN: el 1 sin modificar falla, el 6 sin modificar es herida crítica —y
+// una herida crítica es una herida—, y solo después se mira el resultado
+// requerido. O sea que un 6 hiere siempre, mire lo que mire la tabla.
+// Antes topaba a 7 y pintaba «imposible»: un -1 al herir sobre un 6+ dejaba
+// la tirada en cero cuando en realidad no debía cambiar nada.
+// ── PERFIL EFECTIVO DEL ARMA ──
+// El arma guardada no se toca: los modificadores de la tirada se aplican aquí
+// y mueren con ella. Todo lo que calcule o pinte F, PA o Daño pasa por estas
+// tres, nunca por S.atk.F / .FP / .D a pelo.
+const fuerzaEf = () => Math.max(1, S.atk.F + (S.atk.modF || 0));
+// La PA se guarda en negativo (FP:-1 = PA-1), así que un modificador negativo
+// la MEJORA. El tope de 0 es porque una PA positiva no existe.
+const fpEf = () => Math.min(0, S.atk.FP + (S.atk.modFP || 0));
+
+// ── PERFIL EFECTIVO DEL DEFENSOR ──
+const resistenciaEf = () => Math.max(1, S.def.R + (S.def.modR || 0));
+
+// ── SALVACIÓN EFECTIVA (11ª, 05.04, p19) ──
+// La tabla tiene DOS condiciones de éxito, y no son simétricas:
+//   · Invulnerable: el resultado **sin modificar** iguala o supera el Inv.
+//   · Armadura:     el resultado **tras modificar** por el FP iguala o
+//                   supera la S.
+// O sea que los modificadores a la salvación NO tocan la invulnerable, nunca.
+// Como las dos se comprueban con el mismo dado, basta quedarse con el umbral
+// más bajo: así un «+1 a la salvación» puede hacer que a una unidad le
+// convenga la armadura donde antes le convenía la invulnerable.
+//
+// Vive en un solo sitio porque estaba copiado en tres (tirada, daño esperado
+// y tiradas necesarias) y en este archivo eso ha acabado siempre en que la
+// pantalla dice una cosa y los dados hacen otra.
+function salvacionEf() {
+  const d = S.def;
+  // modSalv positivo = suma a la tirada = salva con menos. El tope de 2 es
+  // el mismo que ofrecen los chips: no hay salvaciones de 1+.
+  const salvArm = Math.max(2, d.S + Math.abs(fpEf()) - (d.modSalv || 0));
+  const inv = d.inv > 0 ? d.inv : 7;
+  const usaInv = inv < salvArm;
+  const salvEf = Math.min(inv, salvArm);
+  return { salvArm, inv, usaInv, salvEf: salvEf > 6 ? 7 : salvEf };
+}
+
+const objHeridaEf = () =>
+  Math.max(2, Math.min(6, objHerida(fuerzaEf(), resistenciaEf())
+                          - S.atk.modHer
+                          // [LANZA] (24.21): +1 a la tirada para herir si se
+                          // cargó, o sea 1 menos en el resultado necesario
+                          - (S.atk.lanza ? 1 : 0)));
+
+// ── HERIDA CRÍTICA (11ª, 05.02 y [ANTI] 24.03) ──
+// Por defecto solo el 6 sin modificar. [ANTI X Y+] baja ese umbral a Y para
+// los blancos con la clave X; la herramienta no conoce las claves del blanco,
+// así que la marcas tú al tirar.
+const umbralCritHer = () => S.atk.anti || 6;
+
+// Con qué resultado tiene éxito la tirada para herir. Una herida crítica ES
+// una herida (p18, y la tabla comprueba el crítico ANTES del requerido), así
+// que con [ANTI 4+] un 4 hiere aunque la tabla pida 5+. De ahí el mínimo.
+const objHeridaReal = () => Math.min(objHeridaEf(), umbralCritHer());
+
+// ── DADOS DE ATAQUE EXTRA, POR MINIATURA ──
+// [ÁREA X] (24.05) y [TAJAR X] (24.06) añaden X dados por cada 5 miniaturas
+// del blanco, redondeando a la baja; [FUEGO RÁPIDO X] (24.30) añade X a media
+// distancia. Los tres ejemplos del reglamento dan el total **de un arma**
+// («para un total de 7»), así que se suman por miniatura atacante, igual que
+// el atributo A, y no una sola vez para toda la unidad.
+const dadosExtra = () => {
+  const a = S.atk;
+  // Se cuentan las miniaturas vivas que tiene ahora el defensor. Si no hay
+  // unidad elegida, `minis` es 0 y área y tajar no suman nada.
+  const grupos = Math.floor((S.def.minis || 0) / 5);
+  return (a.area || 0) * grupos + (a.tajar || 0) * grupos + (a.fuegoRap || 0);
+};
+
+// ── DAÑO EFECTIVO ──
+// [FUSIÓN X] (24.25) «suma X al atributo D de esa arma»: D6 pasa a D6+X, y
+// D6+1 con fusión 2 pasa a D6+3. Se compone la cadena y la interpreta
+// RE_DADO, en vez de sumar aparte, para que la pantalla y los dados digan
+// lo mismo.
+function sumarDaño(d, x) {
+  if (!x) return String(d);
+  const m = RE_DADO.exec(String(d).toUpperCase().replace(/\s/g, ''));
+  if (!m) return String((parseInt(d) || 1) + x);
+  const fijo = parseInt(m[3] || '0') + x;
+  return `${m[1] || ''}D${m[2]}${fijo ? (fijo > 0 ? '+' : '') + fijo : ''}`;
+}
+// Fusión y el modificador de la tirada se suman los dos al atributo D
+const dañoEf = () => sumarDaño(S.atk.D, (S.atk.fusion || 0) + (S.atk.modD || 0));
+
+// ═══════════════════════════════════════════════════════════
+//  REPARTO DEL DAÑO
+//  Cada herida sin salvar va a UNA miniatura; el exceso se pierde.
+//  Las heridas mortales sueltas sí se acumulan de una miniatura a la
+//  siguiente, pero las de [HERIDAS DEVASTADORAS] no: van aparte.
+// ═══════════════════════════════════════════════════════════
+function repartirDaño(dañosPorHerida, dañosDevast, mortales, W, minisVivas, fnp) {
+  const limite = minisVivas > 0 ? minisVivas : Infinity;
+  let muertas = 0, restante = W, desperdiciado = 0, fnpBloq = 0;
+
+  function aplicar(puntos, seAcumula) {
+    let p = puntos;
+    while (p > 0) {
+      if (muertas >= limite) { desperdiciado += p; return; }
+      const usa = Math.min(p, restante);
+      restante -= usa;
+      p -= usa;
+      if (restante === 0) { muertas++; restante = W; }
+      if (!seAcumula && p > 0) { desperdiciado += p; return; }
+    }
+  }
+
+  // El sin dolor se tira por cada punto de daño
+  const trasFnp = puntos => {
+    if (fnp <= 0) return puntos;
+    let n = puntos;
+    for (let i = 0; i < puntos; i++) if (d6() >= fnp) { n--; fnpBloq++; }
+    return n;
+  };
+
+  // Heridas mortales sueltas (estratagemas, psíquicos). Los impactos letales
+  // ya NO entran aquí: desde 11ª hieren solos y pasan por la salvación.
+  for (let i = 0; i < mortales; i++) {
+    if (fnp > 0 && d6() >= fnp) { fnpBloq++; continue; }
+    aplicar(1, true);
+  }
+
+  for (const dv of dañosPorHerida) {
+    const efectivo = trasFnp(dv);
+    if (efectivo > 0) aplicar(efectivo, false);
+  }
+
+  // Y DESPUÉS el daño normal, las devastadoras (11ª, 24.10): cada herida
+  // crítica inflige tantas mortales como el Daño del arma, pero puede dañar
+  // 1 miniatura como mucho y lo que sobre se pierde. Por eso se reparten
+  // como una herida normal (sin acumular) y no de una en una.
+  for (const dv of dañosDevast || []) {
+    const efectivo = trasFnp(dv);
+    if (efectivo > 0) aplicar(efectivo, false);
+  }
+
+  return { muertas, heridasUltima: restante === W ? null : restante, desperdiciado, fnpBloq };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════
+function pintarTodo() {
+  pintarBandos();
+  pintarCardAtk();
+  pintarCardDef();
+  pintarNecesarias();
+  pintarModificadores();
+  pintarBotonLanzar();
+}
+
+function pintarBandos() {
+  const a = ejercito(P.ladoA), b = ejercito(P.ladoB);
+  document.getElementById('bandos').innerHTML = `
+    <div class="bando atacante" onclick="verPartida()">
+      <div class="bando-l">Ataca</div>
+      <div class="bando-n">${a ? esc(a.nombre) : '—'}</div>
+    </div>
+    <button class="swap" onclick="invertirBandos()" title="Invertir bandos">⇄</button>
+    <div class="bando" onclick="verPartida()">
+      <div class="bando-l">Defiende</div>
+      <div class="bando-n">${b ? esc(b.nombre) : '—'}</div>
+    </div>`;
+}
+
+function nModsDef() {
+  const d = S.def;
+  return [d.cob, d.fnp > 0, d.hm > 0, d.modR !== 0, d.modSalv !== 0].filter(Boolean).length;
+}
+
+function nModsAtk() {
+  const a = S.atk;
+  const dist = a.tipo === 'dist';
+  // Las situacionales cuentan igual: son lo que más fácil se olvida encendido
+  const sit = [a.anti > 0, a.psiquica,
+               dist && a.pesada, dist && a.fuegoRap > 0, dist && a.fusion > 0,
+               dist && a.area > 0, !dist && a.lanza, !dist && a.tajar > 0,
+               a.modF !== 0, a.modFP !== 0, a.modD !== 0];
+  return (a.rafaga
+    ? [true, a.repHer, a.devast, a.modHer !== 0, a.ignCob, ...sit]
+    : [a.rep !== 'no', a.repHer, a.letal, a.devast, a.sus,
+       a.modImp !== 0, a.modHer !== 0, a.ignCob, ...sit]
+  ).filter(Boolean).length;
+}
+
+function pintarCardAtk() {
+  const a = S.atk;
+  const nM = nModsAtk();
+
+  const autoTxt = [];
+  if (a.rafaga) autoTxt.push('ráfaga');
+  if (a.ignCob) autoTxt.push('ignora cobertura');
+  if (a.repHer) autoTxt.push('repite al herir');
+  if (a.sus)    autoTxt.push(`golpes sostenidos ${a.susX}`);
+  if (a.letal)  autoTxt.push('impactos letales');
+  if (a.devast) autoTxt.push('devastadoras');
+  // Las situacionales también se enseñan en la tarjeta: encendidas sin querer
+  // cambian el resultado y dentro del acordeón no se ven
+  const dist = a.tipo === 'dist';
+  if (a.anti)             autoTxt.push(`anti ${a.anti}+`);
+  if (a.psiquica)         autoTxt.push('psíquica');
+  if (dist && a.pesada)   autoTxt.push('pesada');
+  if (dist && a.fuegoRap) autoTxt.push(`fuego rápido ${a.fuegoRap}`);
+  if (dist && a.fusion)   autoTxt.push(`fusión ${a.fusion}`);
+  if (dist && a.area)     autoTxt.push(`área ${a.area}`);
+  if (!dist && a.lanza)   autoTxt.push('lanza');
+  if (!dist && a.tajar)   autoTxt.push(`tajar ${a.tajar}`);
+  // Los modificadores al perfil cambian lo que se tira y hay que verlos sin
+  // abrir el panel: la tira de stats ya los lleva dentro y no se notarían
+  if (a.modF)  autoTxt.push(`F ${a.modF > 0 ? '+' : ''}${a.modF}`);
+  if (a.modFP) autoTxt.push(`PA ${a.modFP > 0 ? '+' : ''}${a.modFP}`);
+  if (a.modD)  autoTxt.push(`Daño ${a.modD > 0 ? '+' : ''}${a.modD}`);
+
+  document.getElementById('card-atk').innerHTML = `
+    <div class="pick" onclick="sheetUnidadAtk()">
+      <span class="pick-l">Unidad</span>
+      <span class="pick-v${a.unidad ? '' : ' vacio'}">${esc(a.unidad || 'Elegir unidad')}</span>
+      <span class="pick-c">›</span>
+    </div>
+
+    <div class="pick${a.unitId ? '' : ' fija'}" ${a.unitId ? 'onclick="sheetArmaAtk()"' : ''}>
+      <span class="pick-l">Arma</span>
+      <span class="pick-v${a.arma ? '' : ' vacio'}">${esc(a.arma || (a.unitId ? 'Sin armas' : '—'))}</span>
+      ${a.unitId ? '<span class="pick-c">›</span>' : ''}
+    </div>
+
+    <div class="pick fija">
+      <span class="pick-l">Minis</span>
+      <span class="pick-v" style="flex:1"></span>
+      <div class="pick-step">
+        <div class="psb" onclick="paso('modelos',-1)">−</div>
+        <div class="psn">${a.modelos}</div>
+        <div class="psb" onclick="paso('modelos',1)">+</div>
+      </div>
+    </div>
+
+    <div class="stats-g">
+      <div class="st"><div class="st-v">${a.A}</div><div class="st-l">A</div></div>
+      <div class="st"><div class="st-v">${fuerzaEf()}</div><div class="st-l">F</div></div>
+      <div class="st"><div class="st-v">${fpEf()}</div><div class="st-l">PA</div></div>
+      <div class="st"><div class="st-v">${esc(dañoEf())}</div><div class="st-l">D</div></div>
+    </div>
+
+    <div class="card-pie">
+      ${a.tipo === 'cc' ? 'Combate' : 'Disparo'} · ${a.tipo === 'cc' ? 'HA' : 'HP'} ${a.hab}+
+      ${autoTxt.length ? '<br>' + autoTxt.join(' · ') : ''}
+    </div>
+
+    <button class="ajst${nM ? ' hay' : ''}" onclick="abrirSheetAtk()">
+      <span class="ajst-t">⚙ Ajustes y reglas especiales</span>
+      ${nM ? `<span class="ajst-n">${nM}</span>` : ''}
+    </button>`;
+}
+
+function pintarCardDef() {
+  const d = S.def;
+  const nE = nModsDef();
+
+  // Igual que en el atacante: lo que cambia el resultado tiene que verse sin
+  // abrir el panel. El sin dolor va aquí aunque venga de la unidad, porque es
+  // de lo que más cambia el daño que entra de verdad.
+  const defTxt = [];
+  if (d.fnp > 0) defTxt.push(`no hay dolor ${d.fnp}+`);
+  if (d.cob)     defTxt.push('a cubierto');
+  if (d.hm > 0)  defTxt.push(`${d.hm} mortales`);
+  if (d.modR)    defTxt.push(`R ${d.modR > 0 ? '+' : ''}${d.modR}`);
+  if (d.modSalv) defTxt.push(`salvación ${d.modSalv > 0 ? '+' : ''}${d.modSalv}`);
+
+  document.getElementById('card-def').innerHTML = `
+    <div class="pick" onclick="sheetUnidadDef()">
+      <span class="pick-l">Unidad</span>
+      <span class="pick-v${d.unidad ? '' : ' vacio'}">${esc(d.unidad || 'Elegir unidad')}</span>
+      <span class="pick-c">›</span>
+    </div>
+
+    <div class="pick fija">
+      <span class="pick-l">Minis</span>
+      <span class="pick-v" style="flex:1"></span>
+      <div class="pick-step">
+        <div class="psb" onclick="paso('minis',-1)">−</div>
+        <div class="psn">${d.minis > 0 ? d.minis : '—'}</div>
+        <div class="psb" onclick="paso('minis',1)">+</div>
+      </div>
+    </div>
+
+    <div class="stats-g">
+      <div class="st"><div class="st-v">${resistenciaEf()}</div><div class="st-l">R</div></div>
+      <div class="st"><div class="st-v">${d.S > 6 ? '—' : d.S + '+'}</div><div class="st-l">S</div></div>
+      <div class="st"><div class="st-v">${d.inv > 0 ? d.inv + '+' : '—'}</div><div class="st-l">Inv</div></div>
+      <div class="st hl"><div class="st-v">${d.W}</div><div class="st-l">Herid.</div></div>
+    </div>
+
+    <div class="card-pie">
+      ${d.minis > 0 ? `${d.minis} miniatura${d.minis !== 1 ? 's' : ''} en pie` : 'Sin límite de miniaturas'}
+      ${defTxt.length ? '<br>' + defTxt.join(' · ') : ''}
+    </div>
+
+    <button class="ajst${nE ? ' hay' : ''}" onclick="abrirSheetDef()">
+      <span class="ajst-t">⚙ Ajustes y defensas</span>
+      ${nE ? `<span class="ajst-n">${nE}</span>` : ''}
+    </button>`;
+}
+
+function pintarNecesarias() {
+  const a = S.atk, d = S.def;
+  const habEf = habEfectiva();
+  const objH  = objHeridaReal();
+  const { salvArm, inv, usaInv } = salvacionEf();
+
+  let salvTxt, salvCls = '';
+  if (usaInv) salvTxt = `${inv}+ inv.`;
+  else if (salvArm > 6) { salvTxt = 'imposible'; salvCls = 'imp'; }
+  else salvTxt = `${salvArm}+`;
+
+  let html = `
+    <div class="need-r"><span>Impactar</span><span class="need-v${a.rafaga ? ' auto' : ''}">${a.rafaga ? 'automático' : habEf + '+' + (hayCobertura() ? ' (cob.)' : '')}</span></div>
+    <div class="need-r"><span>Herir</span><span class="need-v">${objH}+</span></div>
+    <div class="need-r"><span>Salvación enemiga</span><span class="need-v ${salvCls}">${salvTxt}</span></div>`;
+  if (d.fnp > 0) html += `<div class="need-r"><span>No hay dolor</span><span class="need-v">${d.fnp}+</span></div>`;
+
+  if (d.W > 1) {
+    html += `<div class="need-r"><span>Heridas por baja</span><span class="need-v">${Math.ceil(d.W / valorMedio(dañoEf()))}</span></div>`;
+  }
+  document.getElementById('need').innerHTML = html;
+}
+
+function pintarModificadores() {
+  const a = S.atk, d = S.def, c = [];
+  if (a.rafaga) c.push({ t: 'Ráfaga', raf: true });
+  if (!a.rafaga) {
+    if (a.rep === 'r1')   c.push({ t: 'Repetir 1s al impactar' });
+    if (a.rep === 'rall') c.push({ t: 'Repetir fallos al impactar' });
+    if (a.letal)  c.push({ t: 'Impactos letales' });
+    if (a.sus)    c.push({ t: `Golpes sostenidos ${a.susX}` });
+    if (a.modImp) c.push({ t: `${a.modImp > 0 ? '+' : ''}${a.modImp} a impactar` });
+  }
+  if (a.repHer) c.push({ t: 'Repetir fallos al herir' });
+  if (a.devast) c.push({ t: 'Heridas devastadoras' });
+  if (a.modHer) c.push({ t: `${a.modHer > 0 ? '+' : ''}${a.modHer} a herir` });
+  if (a.ignCob) c.push({ t: 'Ignora cobertura' });
+  if (hayCobertura()) c.push({ t: 'Cobertura: +1 a impactar' });
+  if (d.hm > 0) c.push({ t: `${d.hm} heridas mortales directas` });
+  document.getElementById('mods-activos').innerHTML =
+    c.map(x => `<span class="mod-c${x.raf ? ' raf' : ''}">${x.t}</span>`).join('');
+}
+
+function pintarBotonLanzar() {
+  const a = S.atk;
+  const btn = document.getElementById('btn-lanzar');
+  if (!a.arma) { btn.textContent = 'Elige un arma'; btn.disabled = true; return; }
+  btn.disabled = false;
+  const unidad = a.rafaga ? 'ataques' : 'dados';
+  const extra = dadosExtra();
+  // Con un A de dado no se puede dar el total, así que se enseña la cuenta.
+  // RE_DADO en vez de la lista de antes: ahora el A podría llevar sumando.
+  if (RE_DADO.test(String(a.A).toUpperCase())) {
+    btn.textContent = `Lanzar ${a.A}${extra ? `+${extra}` : ''} × ${a.modelos}`;
+  } else {
+    btn.textContent = `Lanzar ${((parseInt(a.A) || 1) + extra) * a.modelos} ${unidad}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LANZAR
+// ═══════════════════════════════════════════════════════════
+function lanzar() {
+  const a = S.atk, d = S.def;
+  if (!a.arma) return;
+  const habEf = habEfectiva();
+
+  // ── Paso 1: impactar ──
+  // Con ráfaga no hay tirada: cada ataque impacta. Sin tirada no hay 6 sin
+  // modificar, así que letales y sostenidos no pueden activarse.
+  const impactos = [], fallosImp = [];
+  let totalDados = 0;
+  const extra = dadosExtra();
+  for (let m = 0; m < a.modelos; m++) {
+    // Área, tajar y fuego rápido añaden dados al arma de cada miniatura
+    const nA = resolverDado(a.A) + extra;
+    totalDados += nA;
+    if (a.rafaga) {
+      for (let i = 0; i < nA; i++) impactos.push({ v: null, auto: true, letal: false });
+      continue;
+    }
+    for (let i = 0; i < nA; i++) {
+      let v = d6(), rep = false;
+      if ((a.rep === 'rall' && v < habEf) || (a.rep === 'r1' && v === 1)) { v = d6(); rep = true; }
+      if (v >= habEf) {
+        const letal = a.letal && v === 6;
+        impactos.push({ v, rep, letal });
+        // [GOLPES SOSTENIDOS X] (24.36): el crítico da X impactos adicionales,
+        // no uno. Los extra no son críticos, así que no activan letales.
+        if (a.sus && v === 6) {
+          for (let k = 0; k < (a.susX || 1); k++) {
+            impactos.push({ v: 6, extra: true, letal: false });
+          }
+        }
+      } else {
+        fallosImp.push({ v, rep });
+      }
+    }
+  }
+
+  // ── Paso 2: herir ──
+  const objH = objHeridaReal();
+  const critH = umbralCritHer();
+  const heridas = [], fallosHer = [];
+  let letales = 0;
+  for (const imp of impactos) {
+    // Impactos letales (11ª, 24.23): el impacto crítico hiere automáticamente.
+    // NO es una herida mortal: el defensor tira su salvación y el daño es el
+    // del arma. Y como no hay tirada para herir, esa herida no puede ser
+    // crítica, así que no activa devastadoras — lo dice la nota de diseño de
+    // la propia regla. Se aplica siempre: renunciar es legal pero casi nunca
+    // interesa, porque una herida segura vale más que la opción de un 6.
+    if (imp.letal) { letales++; heridas.push({ v: null, auto: true, devast: false }); continue; }
+    let v = d6(), rep = false;
+    if (a.repHer && v < objH) { v = d6(); rep = true; }
+    // El crítico se mira sobre el dado SIN MODIFICAR, por eso se compara `v`
+    // con `critH` y no con `objH`, que ya lleva los modificadores dentro
+    if (v >= objH) heridas.push({ v, rep, devast: a.devast && v >= critH });
+    else fallosHer.push({ v, rep });
+  }
+  const devastadoras = heridas.filter(h => h.devast).length;
+
+  // ── Paso 3: salvación ──
+  const { salvArm, usaInv, salvEf } = salvacionEf();
+  const normales = heridas.filter(h => !h.devast);
+  const sinSalvar = [], dadosSalv = [];
+  for (const h of normales) {
+    const v = d6();
+    const salvada = salvEf <= 6 && v >= salvEf;
+    dadosSalv.push({ v, salvada });
+    if (!salvada) sinSalvar.push(h);
+  }
+
+  // ── Paso 4: daño y reparto ──
+  // dañoEf() es el Daño del arma con la fusión ya sumada
+  const dmg = dañoEf();
+  const dañosPorHerida = sinSalvar.map(() => resolverDado(dmg));
+  // Cada crítica devastadora inflige tantas mortales como el Daño del arma,
+  // no una sola (11ª, 24.10). Se tira el Daño por separado para cada una.
+  const dañosDevast = heridas.filter(h => h.devast).map(() => resolverDado(dmg));
+  const mortales = d.hm;
+  const rep = repartirDaño(dañosPorHerida, dañosDevast, mortales, d.W, d.minis, d.fnp);
+
+  ultimoResultado = {
+    totalDados, impactos, fallosImp, habEf,
+    heridas, fallosHer, objH, letales, devastadoras,
+    dadosSalv, sinSalvar, salvEf, usaInv, salvArm,
+    dañosPorHerida, dañosDevast, mortales, rep
+  };
+
+  guardarEnHistorial(rep.muertas);
+  pintarResultado();
+  verResultado();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER DEL RESULTADO
+// ═══════════════════════════════════════════════════════════
+function pintarResultado() {
+  const r = ultimoResultado, a = S.atk, d = S.def;
+  const dado = (v, cls) => `<span class="d ${cls}">${v}</span>`;
+
+  let sub = '';
+  if (r.rep.heridasUltima !== null) {
+    sub = `la siguiente queda con ${r.rep.heridasUltima} herida${r.rep.heridasUltima !== 1 ? 's' : ''}`;
+  } else if (r.rep.muertas > 0) {
+    sub = 'sin daño repartido en la siguiente';
+  }
+  if (d.minis > 0 && r.rep.muertas >= d.minis) sub = 'unidad aniquilada';
+
+  const quien = [a.unidad, a.arma].filter(Boolean).join(' · ');
+
+  let html = '';
+  if (quien) html += `<div class="hero-vs">${esc(quien)}<br>contra ${esc(d.unidad || `R${d.R} S${d.S}+`)}</div>`;
+
+  // El deshacer vive aquí, no en el pie: el pie ya lleva cuatro botones a
+  // 375 px y no cabe otro. Se queda a la vista hasta que se usa, así que
+  // también sirve si te das cuenta un rato después.
+  if (ultimasBajas) {
+    const n = ultimasBajas.ids.length;
+    html += `<div class="deshacer">
+      <span>Retirada${n !== 1 ? 's' : ''} ${n} de ${esc(ultimasBajas.nombre)}</span>
+      <button class="deshacer-b" onclick="deshacerBajas()">Deshacer</button>
+    </div>`;
+  }
+
+  html += `
+    <div class="hero${r.rep.muertas === 0 ? ' cero' : ''}">
+      <div class="hero-n">${r.rep.muertas}</div>
+      <div class="hero-l">miniatura${r.rep.muertas !== 1 ? 's' : ''} muerta${r.rep.muertas !== 1 ? 's' : ''}</div>
+      ${sub ? `<div class="hero-s">${sub}</div>` : ''}
+    </div>`;
+
+  if (a.rafaga) {
+    html += `<div class="paso">
+      <div class="paso-h"><span>Impactar <span class="badge-raf">ráfaga</span></span><span class="paso-h-c">${r.totalDados} ataques</span></div>
+      <div class="auto-hits">${r.impactos.length} impacto${r.impactos.length !== 1 ? 's' : ''} automático${r.impactos.length !== 1 ? 's' : ''}, sin tirada</div>
+    </div>`;
+  } else {
+    const todosImp = [...r.impactos.map(x => ({ ...x, ok: true })), ...r.fallosImp.map(x => ({ ...x, ok: false }))]
+      .sort((x, y) => y.v - x.v);
+    html += `<div class="paso">
+      <div class="paso-h"><span>Impactar ${r.habEf}+</span><span class="paso-h-c">${r.totalDados} → ${r.impactos.length}</span></div>
+      <div class="dados">${todosImp.map(x => dado(x.extra ? '+' : x.v, x.ok ? (x.v === 6 ? 'cr' : 'ok') : '')).join('')}</div>
+    </div>`;
+  }
+
+  // Las heridas automáticas de los impactos letales no tienen dado: van
+  // delante y se marcan con un ✓
+  const todasHer = [...r.heridas.map(x => ({ ...x, ok: true })), ...r.fallosHer.map(x => ({ ...x, ok: false }))]
+    .sort((x, y) => (y.v ?? 7) - (x.v ?? 7));
+  html += `<div class="paso">
+    <div class="paso-h"><span>Herir ${r.objH}+</span><span class="paso-h-c">${r.impactos.length - r.letales} dado${r.impactos.length - r.letales !== 1 ? 's' : ''} → ${r.heridas.length}${r.letales ? ` (${r.letales} sin tirada)` : ''}</span></div>
+    <div class="dados">${todasHer.map(x => dado(x.auto ? '✓' : x.v, x.ok ? (x.v === 6 ? 'cr' : 'ok') : '')).join('')}</div>
+  </div>`;
+
+  const nSalv = r.dadosSalv.filter(x => x.salvada).length;
+  html += `<div class="paso">
+    <div class="paso-h"><span>Salvación ${r.salvEf > 6 ? '—' : r.salvEf + '+'}</span><span class="paso-h-c">${r.dadosSalv.length} → ${nSalv} salvada${nSalv !== 1 ? 's' : ''}</span></div>
+    <div class="dados">${r.dadosSalv.map(x => dado(x.v, x.salvada ? 'sv' : '')).join('')}</div>
+  </div>`;
+
+  const puntosDevast = r.dañosDevast.reduce((s, x) => s + x, 0);
+  const totalPuntos = r.dañosPorHerida.reduce((s, x) => s + x, 0) + r.mortales + puntosDevast;
+  html += `<div class="alloc">
+    <div class="lbl" style="margin-bottom:6px">Reparto del daño</div>
+    <div class="al-r"><span>${r.sinSalvar.length} herida${r.sinSalvar.length !== 1 ? 's' : ''} sin salvar</span><span>× Daño ${esc(dañoEf())}</span></div>
+    ${r.devastadoras > 0 ? `<div class="al-r"><span>${r.devastadoras} devastadora${r.devastadoras !== 1 ? 's' : ''}</span><span>${puntosDevast} mortales · 1 miniatura cada una</span></div>` : ''}
+    ${r.mortales > 0 ? `<div class="al-r"><span>Heridas mortales</span><span>${r.mortales}</span></div>` : ''}
+    <div class="al-r"><span>Objetivo de ${d.W} herida${d.W !== 1 ? 's' : ''}</span><span>${totalPuntos} puntos de daño</span></div>
+    ${r.rep.fnpBloq > 0 ? `<div class="al-r"><span>Bloqueado por «no hay dolor»</span><span>${r.rep.fnpBloq}</span></div>` : ''}
+    <div class="al-r tot"><span>Bajas</span><span class="al-ok">${r.rep.muertas} miniatura${r.rep.muertas !== 1 ? 's' : ''}</span></div>
+    ${r.rep.desperdiciado > 0 ? `<div class="al-r"><span class="al-w">Daño desperdiciado</span><span class="al-w">${r.rep.desperdiciado} punto${r.rep.desperdiciado !== 1 ? 's' : ''}</span></div>` : ''}
+  </div>`;
+
+  document.getElementById('res-cont').innerHTML = html;
+  document.getElementById('btn-aplicar').classList.toggle('hide', !S.def.unitId);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CAMBIO DE VISTA
+//  Todas las pantallas se encienden y apagan por aquí. Antes cada función
+//  escondía a mano las que conocía, y al añadir la pantalla del ejército se
+//  quedó visible por debajo del lanzador. Con la lista en un solo sitio,
+//  añadir una vista nueva no puede volver a dejar dos encima de la otra.
+// ═══════════════════════════════════════════════════════════
+// Cada pantalla dice además a dónde vuelve su ← y qué título lleva. Antes eso
+// lo escribía a mano cada función, y `verEjercito` dejaba su destino puesto
+// para las demás: entrando desde la pantalla del ejército, el ← del resultado
+// se iba a Montar partida en vez de al lanzador. Al añadir una vista nueva,
+// basta con meterla aquí.
+const VISTAS = {
+  'vista-partida':  { titulo: 'Partida',     atras: 'verSetup()' },
+  'vista-ejercito': { titulo: 'Ejército',    atras: 'verPartida()' },
+  'vista-setup':    { titulo: 'Lanzador v6', atras: null },
+  'vista-res':      { titulo: 'Resultado',   atras: 'verSetup()' },
+  // El historial se abre desde cualquier sitio, también sin partida montada,
+  // así que su ← no puede ser fijo: sin bandos, el lanzador no sirve de nada
+  'vista-hist':     { titulo: 'Historial',   atras: 'volverDeHistorial()' },
+  // Misma razón que el historial: se abre desde cualquier sitio
+  'vista-copia':    { titulo: 'Copia de seguridad', atras: 'volverDeHistorial()' }
+};
+
+// El ← del historial: al lanzador si hay partida, y si no a montarla.
+// Pasa por empezar() y no por verSetup() a secas, igual que la entrada del
+// cajón, para no caer en una pantalla de tirada sin nada elegido.
+function volverDeHistorial() {
+  if (P.ladoA && P.ladoB && ejercito(P.ladoA) && ejercito(P.ladoB)) empezar();
+  else verPartida();
+}
+
+function mostrarVista(cual) {
+  Object.keys(VISTAS).forEach(v =>
+    document.getElementById(v).classList.toggle('hide', v !== cual));
+
+  const def = VISTAS[cual] || {};
+  const btn = document.getElementById('btn-atras');
+  btn.style.display = def.atras ? '' : 'none';
+  btn.setAttribute('onclick', def.atras || '');
+  document.getElementById('hdr-titulo').textContent = def.titulo || 'Lanzador v6';
+}
+
+// Qué pantalla está a la vista ahora mismo
+const vistaActual = () =>
+  Object.keys(VISTAS).find(v => !document.getElementById(v).classList.contains('hide'));
+
+function verResultado() {
+  mostrarVista('vista-res');
+  document.getElementById('pie').classList.remove('hide');
+  document.getElementById('pie-setup').classList.add('hide');
+  document.getElementById('pie-res').classList.remove('hide');
+  document.getElementById('vista-res').scrollTop = 0;
+}
+
+function verSetup() {
+  mostrarVista('vista-setup');
+  document.getElementById('pie').classList.remove('hide');
+  document.getElementById('pie-res').classList.add('hide');
+  document.getElementById('pie-setup').classList.remove('hide');
+  pintarTodo();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANELES — utilidades
+// ═══════════════════════════════════════════════════════════
+// `mantener` conserva la posición del scroll. Marcar una casilla repinta el
+// panel entero, y sin esto te devolvía arriba del todo en cada toque: en un
+// panel de dos pantallas, eso es más molesto que el propio scroll. Se pasa
+// true desde los repintados (toggle, set, los chips) y nunca al ABRIR uno,
+// que ahí sí se quiere empezar por arriba.
+function abrirSheet(html, mantener = false) {
+  const sheet = document.getElementById('sheet');
+  const y = mantener ? sheet.scrollTop : 0;
+  document.getElementById('sheet-in').innerHTML = html;
+  document.getElementById('ov').classList.add('open');
+  sheet.scrollTop = y;
+}
+function cerrarSheet() { document.getElementById('ov').classList.remove('open'); }
+function cerrarSiFuera(e) { if (e.target.id === 'ov') cerrarSheet(); }
+
+function chips(valores, actual, fn, apagado = false) {
+  return `<div class="chips">${valores.map(v => {
+    const val = typeof v === 'object' ? v.v : v;
+    const txt = typeof v === 'object' ? v.t : v;
+    const sel = String(val) === String(actual) && !apagado ? ' on' : '';
+    const off = apagado ? ' off' : '';
+    const click = apagado ? '' : ` onclick="${fn}('${val}')"`;
+    return `<div class="ch${sel}${off}"${click}>${txt}</div>`;
+  }).join('')}</div>`;
+}
+
+function stepper(id, valor, apagado = false) {
+  const menos = apagado ? '' : ` onclick="paso('${id}',-1)"`;
+  const mas   = apagado ? '' : ` onclick="paso('${id}',1)"`;
+  return `<div class="stepr${apagado ? ' off' : ''}">
+    <div class="sb"${menos}>−</div>
+    <div class="sn" id="sn-${id}">${valor}</div>
+    <div class="sb"${mas}>+</div>
+  </div>`;
+}
+
+const LIMITES = { hab:[2,6], F:[1,20], modelos:[1,50], modImp:[-3,3], modHer:[-3,3],
+                  // Modificadores al perfil solo para esta tirada
+                  modF:[-6,6], modFP:[-3,3], modD:[-3,6],
+                  modR:[-3,3], modSalv:[-3,3],
+                  R:[1,14], S:[2,7], W:[1,30], minis:[0,60], hm:[0,20] };
+
+// (Aquí vivía CAMPOS_PERFIL, que marcaba el perfil como «editado» al tocar
+// sus atributos a mano. Desde que los paneles no editan el perfil —se hace en
+// la ficha del arma o de la unidad— ningún control podía encenderlo, así que
+// el chip naranja no podía aparecer. Comprobado antes de borrarlo. Para los
+// apaños de un turno están modF/modFP/modD y modR/modSalv, que se ven en la
+// tarjeta y mueren con la tirada.)
+
+// Los steppers no repintan el panel, solo su propio número: así no se pierde
+// el foco ni la posición al pulsar +/−. Pero los modificadores al perfil
+// cambian la tira de solo lectura de arriba y la línea que resume el arma,
+// así que ésos SÍ tienen que repintarlo, conservando el scroll.
+const REPINTAN_PANEL = ['modF', 'modFP', 'modD', 'modImp', 'modHer',
+                        'modR', 'modSalv'];
+
+function paso(campo, delta) {
+  const grupo = (campo in S.atk) ? 'atk' : 'def';
+  const [min, max] = LIMITES[campo] || [0, 99];
+  S[grupo][campo] = Math.max(min, Math.min(max, (S[grupo][campo] || 0) + delta));
+  const el = document.getElementById('sn-' + campo);
+  if (el) el.textContent = S[grupo][campo];
+  pintarTodo();
+  if (REPINTAN_PANEL.includes(campo)
+      && document.getElementById('ov').classList.contains('open')) {
+    grupo === 'atk' ? abrirSheetAtk(true) : abrirSheetDef(true);
+  }
+}
+
+function set(grupo, campo, valor) {
+  const num = ['hab','F','FP','modelos','modImp','modHer','R','S','inv','W','minis','fnp','hm'];
+  S[grupo][campo] = num.includes(campo) ? parseInt(valor) : valor;
+  // Pasar la tirada a combate apaga ráfaga e ignorar cobertura, que solo
+  // existen a distancia. No basta con dejar de pintarlas: escondida y
+  // encendida, ráfaga seguiría impactando sola en cuerpo a cuerpo.
+  if (grupo === 'atk' && campo === 'tipo' && valor === 'cc') {
+    S.atk.rafaga = false;
+    S.atk.ignCob = false;
+  }
+  pintarTodo();
+  grupo === 'atk' ? abrirSheetAtk(true) : abrirSheetDef(true);
+}
+
+function toggle(grupo, campo) {
+  S[grupo][campo] = !S[grupo][campo];
+  pintarTodo();
+  grupo === 'atk' ? abrirSheetAtk(true) : abrirSheetDef(true);
+}
+
+// Solo queda un bloque plegable, el «Según el momento» del atacante: el
+// defensor perdió su acordeón al limpiarle el panel. Antes esto era un objeto
+// con una entrada por lado.
+let situacionalesAbiertas = false;
+function toggleSituacionales() {
+  situacionalesAbiertas = !situacionalesAbiertas;
+  abrirSheetAtk(true);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL DEL ATACANTE — ajuste manual y reglas especiales
+// ═══════════════════════════════════════════════════════════
+function abrirSheetAtk(mantener = false) {
+  const a = S.atk;
+
+  abrirSheet(`
+    <div class="grab"></div>
+    <div class="sh-t">Atacante
+      ${a.unidad ? `<div class="sh-t-sub">${esc([a.unidad, a.arma].filter(Boolean).join(' · '))}</div>` : ''}
+    </div>
+
+    <!-- El perfil, de solo lectura y con lo que de verdad se va a tirar:
+         lleva ya los modificadores de abajo. El arma se edita en su ficha,
+         desde la pantalla del ejército, no aquí. -->
+    <div class="perf-ro">
+      <span>${a.tipo === 'cc' ? 'Combate' : 'Disparo'}</span>
+      <span>A${esc(a.A)}</span>
+      <span>${a.tipo === 'cc' ? 'HA' : 'HP'}${a.rafaga ? '—' : habEfectiva() + '+'}</span>
+      <span>F${fuerzaEf()}</span>
+      <span>PA${fpEf()}</span>
+      <span>D${esc(dañoEf())}</span>
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Miniaturas que atacan</span>
+      ${stepper('modelos', a.modelos)}
+    </div>
+
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:3px">Del arma — solo para esta tirada</div>
+    <div class="fld-nota" style="margin-bottom:9px">
+      Vienen puestas del arma. Cambiarlas aquí no la modifica: sirve para una
+      estratagema que te dé o te quite una durante una fase.
+    </div>
+
+    ${a.tipo === 'dist' ? togHtml('atk','rafaga','Ráfaga', a.rafaga, {
+      sub: 'Impacta automáticamente, sin tirada', extra: 'raf' }) : ''}
+    ${togHtml('atk','letal','Impactos letales', a.letal, {
+      sub: a.rafaga ? 'Necesita un 6 al impactar'
+         : 'Los 6 al impactar hieren solos; el defensor salva igual', off: a.rafaga })}
+    ${togHtml('atk','sus','Golpes sostenidos', a.sus, {
+      sub: a.rafaga ? 'Necesita un 6 al impactar'
+         : `${a.susX} impacto${a.susX !== 1 ? 's' : ''} extra por cada 6`, off: a.rafaga })}
+    ${a.sus && !a.rafaga ? `
+    <div class="fld" style="margin-top:-2px">
+      <span class="lbl">¿Cuántos? — la X de [Golpes sostenidos X]</span>
+      ${chips([1,2,3], a.susX, "setSusX")}
+    </div>` : ''}
+    ${togHtml('atk','devast','Heridas devastadoras', a.devast, {
+      sub: `Cada ${umbralCritHer()} al herir inflige Daño ${esc(dañoEf())} en mortales y mata 1 miniatura como mucho`
+           + (a.rafaga ? '. Sigue valiendo con ráfaga: depende del 6 al herir' : '') })}
+    ${togHtml('atk','repHer','Acoplada — repetir fallos al herir', a.repHer, {})}
+    ${a.tipo === 'dist' ? togHtml('atk','ignCob','Ignora cobertura', a.ignCob, {
+      sub: 'Anula la cobertura del defensor' }) : ''}
+
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:3px">De esta tirada</div>
+    <div class="fld-nota" style="margin-bottom:9px">
+      Estratagemas, auras y cualquier otro apaño de un turno. El arma guardada
+      no se toca: estos números mueren con la tirada.
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Repetir tiradas para impactar</span>
+      <div class="seg${a.rafaga ? ' off' : ''}">
+        <div class="seg-i${a.rep === 'no'   && !a.rafaga ? ' on' : ''}"${a.rafaga ? '' : ` onclick="set('atk','rep','no')"`}>No</div>
+        <div class="seg-i${a.rep === 'r1'   && !a.rafaga ? ' on' : ''}"${a.rafaga ? '' : ` onclick="set('atk','rep','r1')"`}>Los 1</div>
+        <div class="seg-i${a.rep === 'rall' && !a.rafaga ? ' on' : ''}"${a.rafaga ? '' : ` onclick="set('atk','rep','rall')"`}>Fallos</div>
+      </div>
+      ${a.rafaga ? '<span class="fld-nota">No hay tirada que repetir.</span>' : ''}
+    </div>
+
+    <div class="form-row">
+      <div class="fld">
+        <span class="lbl">Al impactar</span>
+        ${stepper('modImp', a.modImp, a.rafaga)}
+      </div>
+      <div class="fld">
+        <span class="lbl">Al herir</span>
+        ${stepper('modHer', a.modHer)}
+      </div>
+    </div>
+    ${a.rafaga ? '<div class="fld-nota" style="margin-top:-6px">El de impactar no se aplica sin tirada.</div>' : ''}
+
+    <div class="form-row">
+      <div class="fld">
+        <span class="lbl">Fuerza</span>
+        ${stepper('modF', a.modF)}
+      </div>
+      <div class="fld">
+        <span class="lbl">Penetración</span>
+        ${stepper('modFP', a.modFP)}
+      </div>
+      <div class="fld">
+        <span class="lbl">Daño</span>
+        ${stepper('modD', a.modD)}
+      </div>
+    </div>
+    <div class="fld-nota" style="margin-top:-6px">
+      La penetración se guarda en negativo, así que <b>−1 la mejora</b>.
+      Con esto, el arma tira a F${fuerzaEf()}, PA${fpEf()} y Daño ${esc(dañoEf())}.
+    </div>
+
+    ${bloqueSituacionales()}
+
+    <div class="sh-btns">
+      <button class="b-canc" onclick="cerrarSheet()">Cerrar</button>
+      <button class="b-ok" onclick="cerrarSheet()">Listo</button>
+    </div>
+  `, mantener);
+}
+
+// ── HABILIDADES QUE DEPENDEN DEL MOMENTO ──
+// Las ocho de la sección 24 que no se pueden guardar en el arma porque
+// cambian de una tirada a otra: si te moviste, si cargaste, a qué distancia
+// está el blanco o qué claves tiene. Se marcan aquí, al tirar.
+// Se filtran por tipo de ataque igual que en el panel del arma, para no
+// ofrecer fuego rápido en combate ni lanza disparando.
+function bloqueSituacionales() {
+  const a = S.atk;
+  const dist = a.tipo === 'dist';
+
+  // Un número de 0 (apagada) a 3, para las que llevan X
+  const nivel = (campo, etiq, sub, vals) => `
+    <div class="fld">
+      <span class="lbl">${etiq}</span>
+      ${chips(vals, a[campo] || 0, `setSit_${campo}`)}
+      <span class="fld-nota">${sub}</span>
+    </div>`;
+
+  // Plegado por defecto: son once controles y es lo que menos se toca, así que
+  // es lo que más estorba al desplazarse. El contador del encabezado dice
+  // cuántas hay encendidas, para que plegarlas no sea esconderlas.
+  const n = nSituacionales();
+  return `
+    <hr class="sec-div" style="margin:11px 0">
+    <div class="acord" onclick="toggleSituacionales()">
+      <span class="acord-t">Según el momento</span>
+      ${n > 0 ? `<span class="acord-n">${n}</span>` : ''}
+      <span style="color:var(--muted);font-size:0.7rem">${situacionalesAbiertas ? '▲' : '▼'}</span>
+    </div>
+
+    <div class="extra${situacionalesAbiertas ? ' open' : ''}">
+    <div class="fld-nota" style="margin-bottom:9px">
+      Habilidades que no dependen del arma sino de la situación. Se apagan
+      solas al cambiar de arma.
+    </div>
+
+    ${nivel('anti', '[Anti X Y+] — la Y',
+      a.anti ? `El ${a.anti}+ sin modificar al herir es herida crítica, y una crítica siempre hiere.`
+             : 'Solo si el blanco tiene la clave del arma.',
+      [{v:0,t:'—'},{v:2,t:'2+'},{v:3,t:'3+'},{v:4,t:'4+'},{v:5,t:'5+'},{v:6,t:'6+'}])}
+
+    ${togHtml('atk','psiquica','[Psíquica]', a.psiquica, {
+      sub: 'Ignora los modificadores malos al impactar, incluida la cobertura' })}
+
+    ${dist ? `
+      ${togHtml('atk','pesada','[Pesada]', a.pesada, {
+        sub: '+1 al impactar: no trabado, sin desplegar este turno y sin moverte más de 3"' })}
+      ${nivel('fuegoRap', '[Fuego rápido X]',
+        `+X dados por miniatura si el blanco está a la mitad o menos del alcance.`,
+        [{v:0,t:'—'},1,2,3])}
+      ${nivel('fusion', '[Fusión X]',
+        `Suma X al Daño a media distancia o menos${a.fusion ? `: ahora es Daño ${esc(dañoEf())}` : ''}.`,
+        [{v:0,t:'—'},1,2,3])}
+      ${nivel('area', '[Área X]',
+        `+X dados por cada 5 miniaturas del blanco${textoPorCinco()}`,
+        [{v:0,t:'—'},1,2,3])}
+    ` : `
+      ${togHtml('atk','lanza','[Lanza]', a.lanza, {
+        sub: '+1 al herir si la unidad cargó este turno' })}
+      ${nivel('tajar', '[Tajar X]',
+        `+X dados por cada 5 miniaturas del blanco, con blanco único${textoPorCinco()}`,
+        [{v:0,t:'—'},1,2,3])}
+    `}
+    </div>`;
+}
+
+// Cuántas de las ocho situacionales están encendidas, contando solo las que
+// se aplican al tipo de ataque de ahora: una [Lanza] que quedó puesta de una
+// tirada de combate no cuenta si ahora estás disparando, porque no hace nada.
+function nSituacionales() {
+  const a = S.atk, dist = a.tipo === 'dist';
+  return [a.anti > 0, a.psiquica,
+          dist && a.pesada, dist && a.fuegoRap > 0,
+          dist && a.fusion > 0, dist && a.area > 0,
+          !dist && a.lanza, !dist && a.tajar > 0].filter(Boolean).length;
+}
+
+// Las miniaturas del blanco las pone el defensor elegido. Si no hay ninguno,
+// área y tajar no suman nada y conviene decirlo en vez de callarlo.
+function textoPorCinco() {
+  const n = S.def.minis || 0;
+  return n > 0
+    ? `. Ahora mismo tiene ${n}, o sea ${Math.floor(n / 5)} por cada X.`
+    : '. Sin unidad defensora elegida no suma nada.';
+}
+
+// Las que llevan un número (la X de la habilidad) comparten setter
+['anti','area','tajar','fusion','fuegoRap'].forEach(campo => {
+  window['setSit_' + campo] = v => {
+    S.atk[campo] = parseInt(v) || 0;
+    pintarTodo();
+    abrirSheetAtk(true);
+  };
+});
+
+// opts: { sub } línea explicativa · { off } atenuada y sin pulsar · { extra } clase adicional
+function togHtml(grupo, campo, texto, activo, opts = {}) {
+  const clases = ['tog',
+    activo && !opts.off ? 'on' : '',
+    opts.off ? 'off' : '',
+    opts.extra || ''].filter(Boolean).join(' ');
+  const click = opts.off ? '' : ` onclick="toggle('${grupo}','${campo}')"`;
+  return `<div class="${clases}"${click}>
+    <div class="tog-b">✓</div>
+    <div class="tog-txt">
+      <div class="tog-t">${texto}</div>
+      ${opts.sub ? `<div class="tog-sub">${opts.sub}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// (Aquí vivían setHab, setA, setD y setFP, que editaban el perfil del arma
+// desde el panel del atacante. El panel ya no lleva el perfil —el arma se
+// edita en su ficha— y para los apaños de un turno están modF, modFP y modD,
+// que no tocan el arma guardada. Se quedaron sin usar y se borraron.)
+
+// La X de los golpes sostenidos no toca el perfil del arma, así que no marca
+// la unidad como editada
+function setSusX(v) { S.atk.susX = parseInt(v) || 1; pintarTodo(); abrirSheetAtk(true); }
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL DEL DEFENSOR
+// ═══════════════════════════════════════════════════════════
+function abrirSheetDef(mantener = false) {
+  const d = S.def;
+  const s = salvacionEf();
+
+  abrirSheet(`
+    <div class="grab"></div>
+    <div class="sh-t">Defensor
+      ${d.unidad ? `<div class="sh-t-sub">${esc(d.unidad)}</div>` : ''}
+    </div>
+
+    <!-- El perfil, de solo lectura y ya con los modificadores dentro. La
+         unidad se edita en su ficha, desde la pantalla del ejército. -->
+    <div class="perf-ro">
+      <span>R${resistenciaEf()}</span>
+      <span>S${d.S > 6 ? '—' : d.S + '+'}</span>
+      <span>Inv${d.inv > 0 ? d.inv + '+' : '—'}</span>
+      <span>${d.W} herida${d.W !== 1 ? 's' : ''}</span>
+      <span>salva a ${s.salvEf > 6 ? '—' : s.salvEf + '+'}${s.usaInv ? ' (inv)' : ''}</span>
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Miniaturas en pie</span>
+      ${stepper('minis', d.minis)}
+      <span class="fld-nota">0 = sin límite. Sirve para saber cuándo se aniquila la unidad.</span>
+    </div>
+
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:3px">De la unidad — solo para esta tirada</div>
+    <div class="fld-nota" style="margin-bottom:9px">
+      Viene puesto de la unidad. Cambiarlo aquí no la modifica.
+    </div>
+
+    <div class="fld">
+      <span class="lbl">No hay dolor</span>
+      ${chips([{v:0,t:'—'},{v:4,t:'4+'},{v:5,t:'5+'},{v:6,t:'6+'}], d.fnp, "setFnp")}
+    </div>
+
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:3px">De esta tirada</div>
+    <div class="fld-nota" style="margin-bottom:9px">
+      Terreno, estratagemas y heridas que entran por otra vía. Mueren con la
+      tirada: la unidad guardada no se toca.
+    </div>
+
+    ${togHtml('def','cob','Cobertura', d.cob, {
+      sub: S.atk.ignCob  ? 'El arma ignora la cobertura: no se aplicará'
+         : S.atk.rafaga  ? 'Con ráfaga se impacta sin tirada, así que no se aplica'
+         : S.atk.tipo === 'cc' ? 'En 11ª solo cuenta contra ataques a distancia: en combate no se aplica'
+         : 'En 11ª ya no mejora la salvación: empeora en 1 el HP del atacante' })}
+
+    <div class="form-row">
+      <div class="fld">
+        <span class="lbl">Resistencia</span>
+        ${stepper('modR', d.modR)}
+      </div>
+      <div class="fld">
+        <span class="lbl">Salvación</span>
+        ${stepper('modSalv', d.modSalv)}
+      </div>
+    </div>
+    <div class="fld-nota" style="margin-top:-6px">
+      <b>+1 en salvación la mejora</b>, y no toca la invulnerable: el
+      reglamento (05.04) la comprueba con el dado sin modificar.
+      ${d.modR || d.modSalv
+        ? `Con esto, la unidad es R${resistenciaEf()} y salva a ${s.salvEf > 6 ? '—' : s.salvEf + '+'}${s.usaInv ? ' por la invulnerable' : ''}.`
+        : ''}
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Heridas mortales directas</span>
+      ${stepper('hm', d.hm)}
+    </div>
+
+    <div class="sh-btns">
+      <button class="b-canc" onclick="cerrarSheet()">Cerrar</button>
+      <button class="b-ok" onclick="cerrarSheet()">Listo</button>
+    </div>
+  `, mantener);
+}
+
+// (Aquí vivían setS y setInv, los editores de la salvación y la invulnerable.
+// El panel ya no lleva el perfil —la unidad se edita en su ficha— y para los
+// apaños de un turno está modSalv, que no toca la unidad guardada.)
+function setFnp(v) { S.def.fnp = parseInt(v); pintarTodo(); abrirSheetDef(true); }
+
+// ═══════════════════════════════════════════════════════════
+//  APLICAR BAJAS
+// ═══════════════════════════════════════════════════════════
+let bajasAAplicar = 0;
+
+function abrirSheetBajas() {
+  if (!S.def.unitId) return;
+  const unidad = buscarUnidad(S.def.unitId);
+  if (!unidad) { alert('Esa unidad ya no existe.'); return; }
+  const vivas = contarVivas(unidad);
+  bajasAAplicar = Math.min(ultimoResultado.rep.muertas, vivas);
+  pintarSheetBajas(unidad, vivas);
+}
+
+function pintarSheetBajas(unidad, vivas) {
+  const quedan = vivas - bajasAAplicar;
+  abrirSheet(`
+    <div class="grab"></div>
+    <div class="sh-t">Aplicar bajas</div>
+
+    <div class="aviso">
+      Vas a retirar miniaturas de <strong>${esc(unidad.nombre)}</strong>.
+      Comprueba el número antes de confirmar; si te equivocas, en la pantalla
+      de resultado tendrás un «Deshacer».
+    </div>
+
+    <div class="fld">
+      <span class="lbl">Miniaturas a retirar</span>
+      <div class="stepr">
+        <div class="sb" onclick="ajustarBajas(-1, '${unidad.id}')">−</div>
+        <div class="sn">${bajasAAplicar}</div>
+        <div class="sb" onclick="ajustarBajas(1, '${unidad.id}')">+</div>
+      </div>
+    </div>
+
+    <div class="need">
+      <div class="need-r"><span>En pie ahora</span><span class="need-v">${vivas}</span></div>
+      <div class="need-r"><span>Quedarán</span><span class="need-v">${quedan}</span></div>
+    </div>
+
+    <div class="info-l">La tirada proponía ${ultimoResultado.rep.muertas} baja${ultimoResultado.rep.muertas !== 1 ? 's' : ''}.</div>
+
+    <div class="sh-btns" style="margin-top:14px">
+      <button class="b-canc" onclick="cerrarSheet()">Cancelar</button>
+      <button class="b-ok${quedan === 0 ? ' danger' : ''}" onclick="confirmarBajas('${unidad.id}')">
+        ${quedan === 0 ? 'Aniquilar unidad' : `Retirar ${bajasAAplicar}`}
+      </button>
+    </div>
+  `);
+}
+
+function ajustarBajas(delta, unitId) {
+  const unidad = buscarUnidad(unitId);
+  if (!unidad) return;
+  const vivas = contarVivas(unidad);
+  bajasAAplicar = Math.max(0, Math.min(vivas, bajasAAplicar + delta));
+  pintarSheetBajas(unidad, vivas);
+}
+
+function confirmarBajas(unitId) {
+  if (bajasAAplicar === 0) { cerrarSheet(); return; }
+
+  const armies = todosEjercitos();
+  let unidad = null;
+  Object.values(armies).forEach(ej => (ej.unidades || []).forEach(u => {
+    if (u.id === unitId) unidad = u;
+  }));
+  if (!unidad) { alert('Esa unidad ya no existe.'); cerrarSheet(); return; }
+
+  // Se retiran del primer grupo hacia adelante: los básicos antes que las armas pesadas
+  let restantes = bajasAAplicar;
+  const retiradas = [];
+  for (const g of unidad.grupos || []) {
+    for (const m of g.modelos || []) {
+      if (restantes <= 0) break;
+      if (m.vivo) { m.vivo = false; retiradas.push(m.id); restantes--; }
+    }
+    if (restantes <= 0) break;
+  }
+
+  // Se apunta QUÉ miniaturas se retiraron, no una copia del ejército entero:
+  // así deshacer revive exactamente esas y no pisa nada que haya cambiado
+  // por otro camino entre medias.
+  ultimasBajas = { unitId, nombre: unidad.nombre, ids: retiradas };
+
+  guardarJSON(LS_ARMIES, armies);
+  S.def.minis = contarVivas(unidad);
+  pintarTodo();
+  cerrarSheet();
+  if (vistaActual() === 'vista-res') pintarResultado();
+
+  const n = bajasAAplicar;
+  const btn = document.getElementById('btn-aplicar');
+  btn.textContent = `${n} retirada${n !== 1 ? 's' : ''}`;
+  setTimeout(() => { btn.textContent = 'Aplicar'; }, 2500);
+}
+
+// ── DESHACER LAS ÚLTIMAS BAJAS ──
+// Aplicar bajas era la única acción que escribía de forma permanente en el
+// ejército sin vuelta atrás: un toque de más en plena partida obligaba a
+// reconstruir la unidad a mano. Se guarda la última y se puede revertir.
+let ultimasBajas = null;
+
+function deshacerBajas() {
+  if (!ultimasBajas) return;
+  const armies = todosEjercitos();
+  let unidad = null;
+  Object.values(armies).forEach(ej => (ej.unidades || []).forEach(u => {
+    if (u.id === ultimasBajas.unitId) unidad = u;
+  }));
+  if (!unidad) {
+    alert('Esa unidad ya no existe, así que no hay nada que devolver.');
+    ultimasBajas = null; pintarTodo(); return;
+  }
+
+  // Puede que alguna ya no exista: si después se bajó el tamaño de la unidad,
+  // `ajustarModelos()` quita primero las muertas. Se revive lo que quede.
+  const porId = new Set(ultimasBajas.ids);
+  let revividas = 0;
+  (unidad.grupos || []).forEach(g => (g.modelos || []).forEach(m => {
+    if (porId.has(m.id) && !m.vivo) { m.vivo = true; revividas++; }
+  }));
+
+  guardarJSON(LS_ARMIES, armies);
+  if (S.def.unitId === unidad.id) S.def.minis = contarVivas(unidad);
+  const faltaban = ultimasBajas.ids.length - revividas;
+  ultimasBajas = null;
+  pintarTodo();
+  if (vistaActual() === 'vista-res') pintarResultado();
+  if (faltaban > 0) {
+    alert(`Devueltas ${revividas}. Las otras ${faltaban} ya no estaban en la unidad.`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTORIAL
+// ═══════════════════════════════════════════════════════════
+function dañoEsperado() {
+  const a = S.atk, d = S.def;
+  // Los dados extra de área, tajar y fuego rápido van por miniatura, igual
+  // que en lanzar(): si se sumaran fuera del producto saldría una tirada
+  // distinta de la que hacen los dados
+  const nA = (valorMedio(a.A) + dadosExtra()) * a.modelos;
+  const habEf = habEfectiva();
+
+  let pImp;
+  if (a.rafaga) pImp = 1;
+  else {
+    pImp = Math.max(0, (7 - habEf) / 6);
+    if (a.rep === 'rall')     pImp = pImp * (2 - pImp);
+    else if (a.rep === 'r1')  pImp = pImp * (7 / 6);
+    pImp = Math.min(1, pImp);
+  }
+
+  let impactos = nA * pImp;
+  if (a.sus && !a.rafaga) impactos += (nA / 6) * (a.susX || 1);
+
+  // Los impactos letales salen de la tirada para herir y entran ya como
+  // herida, pero pasan por la salvación como cualquier otra
+  let paraHerir = impactos, heridasAuto = 0;
+  if (a.letal && !a.rafaga) { heridasAuto = nA / 6; paraHerir = Math.max(0, impactos - heridasAuto); }
+
+  const objH = objHeridaReal();
+  let pHer = Math.max(0, (7 - objH) / 6);
+  if (a.repHer) pHer = pHer * (2 - pHer);
+
+  let heridas = paraHerir * pHer;
+  const dmg = valorMedio(dañoEf());
+  // Las devastadoras salen de la secuencia normal y cada una inflige el Daño
+  // del arma en mortales (24.10). Aquí se cuenta el daño bruto, igual que el
+  // de las heridas normales, para que cuadre con lo que guarda el historial.
+  let dañoDevast = 0;
+  if (a.devast) {
+    // La crítica sale con el dado sin modificar, así que su probabilidad la
+    // fija el umbral de [ANTI], no el resultado necesario para herir
+    const dv = paraHerir * (7 - umbralCritHer()) / 6;
+    dañoDevast = dv * dmg;
+    heridas = Math.max(0, heridas - dv);
+  }
+  heridas += heridasAuto;   // las automáticas nunca son críticas
+
+  const { salvEf } = salvacionEf();
+  const pSalv   = salvEf <= 6 ? Math.min(1, (7 - salvEf) / 6) : 0;
+
+  // El sin dolor se tira también contra las heridas mortales directas, igual
+  // que en la simulación: por eso d.hm entra antes de aplicarlo
+  let daño = heridas * (1 - pSalv) * dmg + dañoDevast + d.hm;
+  if (d.fnp > 0) daño *= 1 - (7 - d.fnp) / 6;
+
+  return Math.max(0, Math.round(daño * 10) / 10);
+}
+
+// El v3 lee `ts` y `esperado` para pintar el historial: si faltan, muestra
+// "Invalid Date" y 100%. Van siempre.
+function guardarEnHistorial(muertas) {
+  const a = S.atk, d = S.def;
+  const hist = leerJSON(LS_HIST, []);
+  const quien = [a.unidad, a.arma].filter(Boolean).join(' · ');
+  hist.unshift({
+    desc: quien ? `${quien} · ${a.modelos}m`
+                : `F${fuerzaEf()} PA${fpEf()} Daño ${dañoEf()} × ${a.modelos}m`,
+    modelos: a.modelos,
+    // Daño que de verdad entró: el bruto menos lo que paró el «no hay dolor».
+    // Antes se guardaba el bruto y `esperado` sí descontaba el sin dolor, así
+    // que contra una unidad con un 5+ el historial comparaba 2,2 contra 1,5 y
+    // cualquier tirada normal parecía un 50% mejor de lo que había sido.
+    resultado: Math.max(0,
+                 ultimoResultado.dañosPorHerida.reduce((s, x) => s + x, 0)
+               + ultimoResultado.dañosDevast.reduce((s, x) => s + x, 0)
+               + ultimoResultado.mortales
+               - ultimoResultado.rep.fnpBloq),
+    esperado: dañoEsperado(),
+    muertas,
+    objetivo: d.unidad || `R${d.R} S${d.S}+`,
+    ts: Date.now()
+  });
+  guardarJSON(LS_HIST, hist.slice(0, 40));
+}
+
+//  CAJÓN LATERAL (sale por la derecha, que es donde está el ☰)
+//  Hace de menú y enseña dentro los ejércitos: tocar uno abre sus unidades y
+//  tocar su etiqueta cambia el bando sin salir de la pantalla de tirada.
+//  Las tiradas se fueron a su propia pantalla el 04/11/2026; aquí solo queda
+//  la entrada que lleva a ella.
+function abrirCajon() {
+  pintarCajon();
+  document.getElementById('cajon-ov').classList.add('open');
+}
+function cerrarCajon() { document.getElementById('cajon-ov').classList.remove('open'); }
+function cerrarCajonSiFuera(e) { if (e.target.id === 'cajon-ov') cerrarCajon(); }
+
+function pintarCajon() {
+  const armies = Object.values(todosEjercitos());
+  const hist = leerJSON(LS_HIST, []);
+  // Se marca la entrada solo si es la pantalla en la que estás: en la del
+  // ejército o en el resultado no se marca ninguna
+  const vista = vistaActual();
+  const listo = P.ladoA && P.ladoB && P.ladoA !== P.ladoB;
+
+  let h = '';
+
+  // ── Ir a ──
+  h += `<div class="cj-sec">Ir a</div>`;
+  h += `<div class="cj-it${vista === 'vista-setup' ? ' on' : ''}" onclick="${listo ? 'irALanzador()' : ''}">
+    <span class="cj-ico">⚄</span><span class="cj-n">Lanzador de dados</span>
+    ${listo ? '' : '<span class="cj-cnt">falta bando</span>'}
+  </div>`;
+  h += `<div class="cj-it${vista === 'vista-partida' ? ' on' : ''}" onclick="irAPartida()">
+    <span class="cj-ico">⚔</span><span class="cj-n">Montar partida</span>
+  </div>`;
+  // Las tiradas ya no se listan aquí: solo la puerta a su pantalla
+  h += `<div class="cj-it${vista === 'vista-hist' ? ' on' : ''}" onclick="verHistorial()">
+    <span class="cj-ico">🕐</span><span class="cj-n">Historial de tiradas</span>
+    ${hist.length ? `<span class="cj-cnt">${hist.length}</span>` : ''}
+  </div>`;
+  h += `<div class="cj-it${vista === 'vista-copia' ? ' on' : ''}" onclick="verCopia()">
+    <span class="cj-ico">💾</span><span class="cj-n">Copia de seguridad</span>
+  </div>`;
+
+  // ── Ejércitos ──
+  h += `<hr class="cj-sep"><div class="cj-sec">Ejércitos</div>`;
+  if (!armies.length) {
+    h += `<div class="cj-vacio">Todavía no hay ninguno. Crea el tuyo y el del rival, y añádeles sus unidades.</div>`;
+  } else {
+    armies.forEach(ej => {
+      const esA = ej.id === P.ladoA, esB = ej.id === P.ladoB;
+      const cls = esA ? ' a' : (esB ? ' b' : '');
+      const txtTag = esA ? 'ataca' : (esB ? 'defiende' : '— sin bando');
+      const tag = `<span class="cj-tag${cls}" onclick="event.stopPropagation();rotarRolDesdeCajon('${ej.id}')">${txtTag}</span>`;
+      // Toda la tarjeta lleva a las unidades. La etiqueta de bando para el
+      // clic antes de que suba, que si no abriría el ejército al cambiarlo.
+      h += `<div class="cj-ej${cls}" onclick="verEjercito('${ej.id}')">
+        <div class="cj-ej-n">
+          <span style="flex:1;min-width:0">${esc(ej.nombre)}</span>
+          ${tag}<span class="cj-ej-fl">›</span>
+        </div>
+        <div class="cj-ej-s">${resumenEj(ej)}</div>
+      </div>`;
+    });
+    h += `<div class="cj-vacio" style="padding-top:4px">Toca un ejército para ver sus unidades. La etiqueta de la derecha cambia su bando.</div>`;
+  }
+  h += `<div class="cj-add" onclick="cerrarCajon();sheetNuevoEjercito()">+ Crear ejército</div>`;
+
+  // ── Acciones ──
+  if (listo) {
+    h += `<hr class="cj-sep">`;
+    h += `<div class="cj-it" onclick="cerrarCajon();invertirBandos()">
+      <span class="cj-ico">⇄</span><span class="cj-n">Invertir bandos</span></div>`;
+  }
+
+  document.getElementById('cajon').innerHTML = h;
+}
+
+// Escapa el texto que escriben los jugadores (nombres de ejército y de unidad)
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function irALanzador() {
+  if (!(P.ladoA && P.ladoB && P.ladoA !== P.ladoB)) return;
+  cerrarCajon();
+  empezar();
+}
+
+function irAPartida() { cerrarCajon(); verPartida(); }
+
+// Al rotar desde el cajón se repinta el cajón, no la pantalla de detrás
+function rotarRolDesdeCajon(ejId) {
+  if (P.ladoA === ejId)      { P.ladoA = null; P.ladoB = ejId; }
+  else if (P.ladoB === ejId) { P.ladoB = null; }
+  else if (!P.ladoA)         { P.ladoA = ejId; }
+  else                       { P.ladoB = ejId; }
+  if (P.ladoA && P.ladoA === P.ladoB) P.ladoB = null;
+  guardarPartida();
+  pintarCajon();
+  // Si el lanzador está a la vista, se recoloca con los bandos nuevos
+  if (document.getElementById('vista-setup').classList.contains('hide') === false) {
+    autoSeleccionar('atk', P.ladoA);
+    autoSeleccionar('def', P.ladoB);
+    pintarTodo();
+  } else if (document.getElementById('vista-partida').classList.contains('hide') === false) {
+    pintarPartida();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANTALLA DE HISTORIAL
+//  Antes eran cinco tiradas apretadas dentro del cajón. Aquí caben las 40
+//  que se guardan, con la fecha y lo que se esperaba de cada una.
+// ═══════════════════════════════════════════════════════════
+function verHistorial() {
+  cerrarCajon();
+  mostrarVista('vista-hist');
+  document.getElementById('pie').classList.add('hide');
+  document.getElementById('vista-hist').scrollTop = 0;
+  pintarHistorial();
+}
+
+function pintarHistorial() {
+  const hist = leerJSON(LS_HIST, []);
+  if (!hist.length) {
+    document.getElementById('hist-cont').innerHTML =
+      `<div class="vacio">Todavía no has lanzado nada.<br>Las tiradas se guardan solas y aparecen aquí.</div>`;
+    return;
+  }
+
+  const fecha = ts => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return isNaN(d) ? '' : d.toLocaleString('es-ES',
+      { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
+  let h = `<div class="pt-s" style="margin-bottom:11px">Las ${hist.length}
+    últimas tiradas, de la más reciente a la más antigua.</div>`;
+
+  hist.forEach(t => {
+    // El daño esperado se enseña al lado, sin calcular un porcentaje: las
+    // entradas del v3, el v4 y el v5 guardan daño bruto y el v6 lo guarda
+    // neto, así que un «%» compararía peras con manzanas sin avisar.
+    const esp = (typeof t.esperado === 'number' && isFinite(t.esperado))
+      ? ` · esperado ${t.esperado.toFixed(1)}` : '';
+    h += `<div class="h-it">
+      <div class="h-t">
+        <span style="flex:1;min-width:0">${esc(t.objetivo || '—')}</span>
+        <span class="h-n">${t.muertas !== undefined
+          ? t.muertas + ' baja' + (t.muertas !== 1 ? 's' : '')
+          : t.resultado + ' daño'}</span>
+      </div>
+      <div class="h-s">${esc(t.desc || '')}</div>
+      <div class="h-f">${esc(fecha(t.ts))}${esp}</div>
+    </div>`;
+  });
+
+  h += `<div class="cj-add" style="padding:12px 0 0" onclick="limpiarHistorial()">Limpiar historial</div>`;
+  document.getElementById('hist-cont').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COPIA DE SEGURIDAD
+//  Los ejércitos viven SOLO en el localStorage de este dispositivo. Si Safari
+//  borra los datos del sitio —lo hace seguro con «Borrar historial y datos»—
+//  desaparecen y no hay copia en ninguna parte. De ahí esta pantalla.
+//
+//  El archivo descargado es la copia que de verdad protege: queda en Archivos
+//  o iCloud y sobrevive a que se limpie el navegador. El portapapeles sirve
+//  para pegarlo en Notas o en el chat.
+//
+//  El historial de tiradas NO entra: es ruido y se rehace solo.
+// ═══════════════════════════════════════════════════════════
+const COPIA_APP = 'w40k-lanzador-v6';
+
+function datosCopia() {
+  return {
+    app: COPIA_APP,
+    version: 1,
+    fecha: new Date().toISOString(),
+    ejercitos: todosEjercitos(),
+    partida: { ladoA: P.ladoA, ladoB: P.ladoB }
+  };
+}
+
+// Qué trae un volcado, en una línea, para poder enseñarlo antes de restaurar
+function resumenCopia(d) {
+  const ejs = Object.values(d.ejercitos || {});
+  const nU = ejs.reduce((s, e) => s + (e.unidades || []).length, 0);
+  const nM = ejs.reduce((s, e) => s + (e.unidades || []).reduce(
+    (t, u) => t + (u.grupos || []).reduce((q, g) => q + (g.modelos || []).length, 0), 0), 0);
+  return `${ejs.length} ejército${ejs.length !== 1 ? 's' : ''} · ${nU} unidad${nU !== 1 ? 'es' : ''} · ${nM} miniaturas`;
+}
+
+// Comprueba la FORMA antes de dejar restaurar: un texto a medias o de otra
+// herramienta borraría los dos ejércitos sin posible vuelta atrás.
+function validarCopia(texto) {
+  let d;
+  try { d = JSON.parse(texto); } catch (e) { return { error: 'Eso no es un JSON válido.' }; }
+  if (!d || typeof d !== 'object') return { error: 'El contenido no tiene la forma esperada.' };
+  if (d.app !== COPIA_APP) return { error: 'Esta copia no es del lanzador v6.' };
+  if (!d.ejercitos || typeof d.ejercitos !== 'object') return { error: 'No trae ningún ejército.' };
+  for (const [id, ej] of Object.entries(d.ejercitos)) {
+    if (!ej || typeof ej !== 'object') return { error: `El ejército "${id}" está mal formado.` };
+    if (!Array.isArray(ej.unidades)) return { error: `"${ej.nombre || id}" no trae lista de unidades.` };
+    for (const u of ej.unidades) {
+      if (!u || !Array.isArray(u.grupos)) return { error: `Una unidad de "${ej.nombre || id}" no trae sus armas.` };
+    }
+  }
+  return { d };
+}
+
+function verCopia() {
+  cerrarCajon();
+  mostrarVista('vista-copia');
+  document.getElementById('pie').classList.add('hide');
+  document.getElementById('vista-copia').scrollTop = 0;
+  pintarCopia();
+}
+
+function pintarCopia(aviso) {
+  const d = datosCopia();
+  document.getElementById('copia-cont').innerHTML = `
+    <div class="pt-s" style="margin-bottom:11px">
+      Tus ejércitos viven solo en este dispositivo. Si el navegador borra los
+      datos del sitio, desaparecen. Guarda el archivo de vez en cuando.
+    </div>
+
+    <div class="lbl" style="margin-bottom:3px">Lo que hay ahora</div>
+    <div class="fld-nota" style="margin-bottom:9px">${esc(resumenCopia(d))}</div>
+
+    <button class="btn-full acc" onclick="descargarCopia()">⬇ Descargar archivo</button>
+    <button class="btn-full" onclick="copiarCopia()">⧉ Copiar al portapapeles</button>
+    <div class="info-l" style="margin-bottom:4px">
+      El archivo queda en Archivos o iCloud y aguanta aunque se limpie Safari.
+    </div>
+    ${aviso ? `<div class="${aviso.ok ? 'cp-ok' : 'cp-mal'}" style="margin-bottom:9px">${esc(aviso.txt)}</div>` : ''}
+
+    <details style="margin-bottom:13px">
+      <summary class="lbl" style="cursor:pointer">Ver el contenido</summary>
+      <textarea class="cp-area" readonly style="margin-top:7px">${esc(JSON.stringify(d))}</textarea>
+    </details>
+
+    <hr class="sec-div">
+    <div class="lbl" style="margin-bottom:3px">Restaurar</div>
+    <div class="fld-nota" style="margin-bottom:9px">
+      Pega aquí una copia guardada. <b>Reemplaza los ejércitos y los bandos de
+      ahora</b>, no los mezcla. Antes de confirmar te dirá qué contiene.
+    </div>
+    <textarea class="cp-area" id="cp-pegar" placeholder="Pega aquí el contenido de la copia…"></textarea>
+    <button class="btn-full" style="margin-top:7px" onclick="restaurarCopia()">Restaurar</button>`;
+}
+
+function nombreArchivoCopia() {
+  const f = new Date();
+  const dd = n => String(n).padStart(2, '0');
+  return `ejercitos-w40k-${f.getFullYear()}-${dd(f.getMonth() + 1)}-${dd(f.getDate())}.json`;
+}
+
+function descargarCopia() {
+  try {
+    const txt = JSON.stringify(datosCopia(), null, 2);
+    const url = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nombreArchivoCopia();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    pintarCopia({ ok: true, txt: `Descargado ${nombreArchivoCopia()}.` });
+  } catch (e) {
+    pintarCopia({ ok: false, txt: 'No se ha podido descargar. Usa «Copiar al portapapeles».' });
+  }
+}
+
+async function copiarCopia() {
+  const txt = JSON.stringify(datosCopia());
+  try {
+    // En iOS esto exige que la llamada venga de un toque, y así es
+    await navigator.clipboard.writeText(txt);
+    pintarCopia({ ok: true, txt: 'Copiado. Pégalo en Notas, en un correo o donde lo guardes.' });
+  } catch (e) {
+    // Sin permiso de portapapeles queda el cuadro de texto, que es de solo
+    // lectura pero se puede seleccionar y copiar a mano
+    pintarCopia({ ok: false, txt: 'El navegador no ha dejado copiar. Abre «Ver el contenido» y cópialo a mano.' });
+  }
+}
+
+function restaurarCopia() {
+  const campo = document.getElementById('cp-pegar');
+  const texto = (campo && campo.value || '').trim();
+  if (!texto) { pintarCopia({ ok: false, txt: 'Pega antes el contenido de una copia.' }); return; }
+
+  const { d, error } = validarCopia(texto);
+  if (error) { pintarCopia({ ok: false, txt: error }); return; }
+
+  const ahora = resumenCopia(datosCopia());
+  if (!confirm(`La copia trae ${resumenCopia(d)}.\n\n`
+             + `Sustituirá a lo que hay ahora (${ahora}), que se perderá.\n\n`
+             + '¿Restaurar?')) return;
+
+  guardarJSON(LS_ARMIES, d.ejercitos);
+  const p = d.partida || {};
+  P.ladoA = ejercito(p.ladoA) ? p.ladoA : null;
+  P.ladoB = ejercito(p.ladoB) ? p.ladoB : null;
+  guardarPartida();
+
+  // Lo elegido para tirar apuntaba a unidades que ya no existen
+  Object.assign(S.atk, { ejId: null, unitId: null, unidad: null, arma: null, grupoId: null, perfilId: null });
+  Object.assign(S.def, { ejId: null, unitId: null, unidad: null });
+  ultimasBajas = null;
+
+  if (P.ladoA && P.ladoB) { autoSeleccionar('atk', P.ladoA); autoSeleccionar('def', P.ladoB); }
+  pintarTodo();
+  pintarCopia({ ok: true, txt: `Restaurado: ${resumenCopia(d)}.` });
+}
+
+function limpiarHistorial() {
+  if (!confirm('¿Borrar todo el historial de tiradas?')) return;
+  guardarJSON(LS_HIST, []);
+  // Puede llamarse desde la pantalla del historial o, algún día, desde otro
+  // sitio: se repinta lo que esté a la vista
+  if (vistaActual() === 'vista-hist') pintarHistorial();
+  pintarCajon();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SINCRONIZACIÓN POR LA CLAVE w40k_sync
+//  Si otra herramienta escribe esa clave, este lanzador carga la unidad que
+//  nombre como atacante.
+//
+//  OJO: hoy NADIE la escribe. La escribía el rastreador, que se borró el
+//  03/11/2026, así que este código no se ejecuta nunca. Se deja porque no
+//  molesta y porque es el enganche listo si algún día vuelve a haber una
+//  herramienta que quiera mandar aquí una unidad.
+// ═══════════════════════════════════════════════════════════
+function aplicarSync(data) {
+  if (!data || !data.nombre) return;
+  // Busca la unidad por nombre para conservar el vínculo con su ejército
+  let encontrada = null, ejId = null;
+  Object.values(todosEjercitos()).forEach(ej => (ej.unidades || []).forEach(u => {
+    if (u.nombre === data.nombre && !encontrada) { encontrada = u; ejId = ej.id; }
+  }));
+  if (!encontrada) return;
+
+  elegirUnidadAtk(encontrada.id, ejId, true);
+  // Si el sync traía un arma concreta, intenta casarla por nombre
+  if (data.perfil) {
+    const w = armasDeUnidad(encontrada).find(x => x.n === data.perfil || x.n.endsWith('— ' + data.perfil));
+    if (w) aplicarArma(w);
+  }
+  pintarTodo();
+}
+
+window.addEventListener('storage', e => {
+  if (e.key === LS_SYNC) {
+    try { aplicarSync(JSON.parse(e.newValue || 'null')); } catch(err) {}
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  ARRANQUE
+// ═══════════════════════════════════════════════════════════
+window.onload = () => {
+  const p = leerJSON(LS_PARTIDA, null);
+  if (p) { P.ladoA = p.ladoA; P.ladoB = p.ladoB; }
+
+  // Si algún bando apunta a un ejército borrado, se olvida
+  if (!ejercito(P.ladoA)) P.ladoA = null;
+  if (!ejercito(P.ladoB)) P.ladoB = null;
+
+  if (P.ladoA && P.ladoB) {
+    autoSeleccionar('atk', P.ladoA);
+    autoSeleccionar('def', P.ladoB);
+    verSetup();
+    // AQUÍ se leía `w40k_sync` al arrancar, y era un fallo: esa clave es
+    // huérfana —la escribía el rastreador, borrado el 03/11/2026— pero sigue
+    // guardada en los dispositivos que lo usaron, y nadie la borra nunca. El
+    // resultado era que en CADA carga se aplicaba un mensaje viejo y te
+    // cambiaba la unidad atacante sin avisar. Reproducido el 04/11/2026.
+    // El escuchador de `storage` de abajo se queda: ése solo salta si otra
+    // pestaña escribe la clave de verdad, que es el enganche que se quería.
+  } else {
+    verPartida();
+  }
+
+  // El sw.js vive en Herramientas/, un nivel por encima de esta subcarpeta.
+  // Su alcance es esa carpeta hacia abajo, así que cubre también a este archivo.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
+};
+</script>
+</body>
+</html>
