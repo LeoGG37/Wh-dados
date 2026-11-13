@@ -3674,9 +3674,14 @@ window.onload = () => {
     verPartida();
   }
 
-  // El sw.js vive en Herramientas/, un nivel por encima de esta subcarpeta.
-  // Su alcance es esa carpeta hacia abajo, así que cubre también a este archivo.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
+  // Esta copia va suelta: el sw.js está EN LA MISMA CARPETA, así que se
+  // registra con './sw.js'. La copia que vive en Herramientas/ lo tiene una
+  // carpeta por encima y usa '../sw.js'; son dos rutas distintas a propósito.
+  //
+  // Importa acertar: con la ruta equivocada el register da 404, el .catch se
+  // lo traga sin decir nada y te quedas sin icono instalable y sin funcionar
+  // sin conexión, con la herramienta cargando de lo más normal.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 };
 </script>
 </body>

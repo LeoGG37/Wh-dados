@@ -1,4 +1,8 @@
-// Service worker de las herramientas Aeldari.
+// Service worker del LANZADOR SUELTO.
+//
+// OJO: hay otro sw.js en Herramientas/, que cachea las cinco herramientas.
+// Éste es la copia reducida que acompaña al lanzador cuando se publica solo,
+// con los dos archivos en la misma carpeta. No son intercambiables.
 //
 // ESTRATEGIA: primero la red, la caché como respaldo.
 //
@@ -46,18 +50,22 @@
 // v24 → «⧉ Duplicar» en la ficha de la unidad del v6 (07/11/2026).
 // v25 → pantalla de copia de seguridad del v6: descargar, copiar y restaurar
 //       los ejércitos, que hasta ahora vivían sin ninguna copia (07/11/2026).
-const CACHE = 'w40k-aeldari-v25';
+// v26 → ESTA COPIA ES DEL LANZADOR SUELTO (13/11/2026). Vive junto al v6 en
+//       una sola carpeta, para publicarla tal cual en GitHub. Se le quitó de
+//       la lista todo lo que aquí no existe: el índice, las fichas, la
+//       chuleta y datos_unidades.js. También se quitó el campo `lider` del
+//       lanzador, que nadie leía.
+const CACHE = 'w40k-aeldari-v26';
 
+// En esta carpeta solo hay dos archivos, y el service worker es uno de ellos.
+// Si se dejara la lista de Herramientas/, las cinco rutas darían 404: con
+// `allSettled` el SW se instalaría igual y NO guardaría nada, así que la
+// herramienta parecería instalada y no funcionaría sin conexión.
 const ARCHIVOS = [
-  './', './index.html',
-  './datos_unidades.js',
-  './fichas_unidades.html',
-  './chuleta_destacamentos.html',
-  // Los lanzadores viven en su propia subcarpeta desde el 30/10/2026.
-  // El espacio del nombre se codifica solo al construir la petición.
-  // Solo se precachea el v6, que es el que enlaza el índice. El v2, el v3,
-  // el v4 y el v5 se quedan en la carpeta como referencia, sin PWA offline.
-  './Lanzador de dados/lanzador_dados_v6.html',
+  './lanzador_dados_v6.html',
+  // Sirve por si algún día el archivo se renombra a index.html y se abre la
+  // carpeta a secas. Si no existe, el 404 se descarta sin romper la instalación.
+  './',
 ];
 
 // Se guarda archivo a archivo en vez de con addAll: así, si uno todavía no
@@ -99,9 +107,11 @@ self.addEventListener('fetch', e => {
       // Sin conexión: lo último que se guardó.
       const guardado = await caches.match(req);
       if (guardado) return guardado;
-      // Si se pedía una página y no está, se abre el índice.
+      // Si se pedía una página y no está, se abre el lanzador, que es la
+      // única que hay aquí (en Herramientas/ este respaldo es el índice).
       if (req.mode === 'navigate') {
-        const inicio = await caches.match('./index.html') || await caches.match('./');
+        const inicio = await caches.match('./lanzador_dados_v6.html')
+                    || await caches.match('./');
         if (inicio) return inicio;
       }
       throw err;
